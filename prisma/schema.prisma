@@ -1,0 +1,70 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+
+model User {
+  id                      String        @id @default(uuid())
+  fullName                String?
+  email                   String        @unique
+  phone                   String?
+  password                String?       // Diubah jadi optional untuk social login
+  avatar                  String?       // Tambahkan field baru
+  token                   String?
+  role                    Role          @default(USER)
+  resetPasswordToken      String?
+  resetPasswordExpire     DateTime?
+  provider                Provider      @default(LOCAL)
+  isVerified              Boolean       @default(false)
+  createdAt               DateTime      @default(now())
+  updatedAt               DateTime      @updatedAt
+  products Product[]
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+
+enum Provider {
+  LOCAL    // Untuk registrasi manual
+  GOOGLE   // Untuk login Google
+}
+
+
+model Product {
+  id              String              @id @default(uuid())
+  name            String
+  price           Float
+  description     String
+  imageUrl        String
+  category        Category
+  weight          Float               // bentuk dalam gram
+  stock           Int
+  expiryDate      DateTime?           // nullable untuk non-makanan/minuman
+  createdAt       DateTime            @default(now())
+  addedBy         User?               @relation(fields: [addedById], references: [id])
+  addedById       String?             // optional jika tidak semua produk punya admin
+
+
+}
+
+
+enum Category {
+  Makanan    
+  Minuman
+  Aksesoris
+}
+
