@@ -16,36 +16,34 @@ router.use(authMiddleware);
 // Tambahkan route yang membutuhkan autentikasi di sini
 
 // auth router
-router.delete('/api/auth/logout', logout);
+router.delete('/api/v1/auth/logout', logout);
 
 // profile router
-router.get('/api/profile', getProfile);
-router.patch('/api/profile', updateProfile);
-router.post('/api/profile/avatar', upload.single('avatar'), uploadAvatar);
-router.patch('/api/profile/changepassword', changePassword);
+router.get('/api/v1/profile', getProfile);
+router.patch('/api/v1/profile', updateProfile);
+router.post('/api/v1/profile/avatar', upload.single('avatar'), uploadAvatar);
+router.patch('/api/v1/profile/changepassword', changePassword);
 
 // product router
-router.get('/api/products', getAllProducts);
-router.get('/api/products/:id', getProductById);
+router.get('/api/v1/products', getAllProducts);
+router.get('/api/v1/products/:id', getProductById);
 
 
 // keranjang router
-router.get('/api/cart', getCart);
-router.post('/api/cart/items', addItemToCart);
-router.patch('/api/cart/items/:productId', updateCartItem);
-router.delete('/api/cart/items/:productId', removeItemFromCart);
-router.delete('/api/cart', clearCart);
+router.get('/api/v1/cart', getCart);
+router.post('/api/v1/cart/items', addItemToCart);
+router.patch('/api/v1/cart/items/:productId', updateCartItem);
+router.delete('/api/v1/cart/items/:productId', removeItemFromCart);
+router.delete('/api/v1/cart', clearCart);
 
 
 // Checkout router
-router.post('/api/checkout', checkout);
+router.post('/api/v1/checkout', checkout);
 
 
 // Raja ongkir route
-// router.get('/api/v1/calculate', getShippingOptions);
-
-router.get('/api/shipping/options', getShippingOptions);
-router.get('/api/shipping/destinations', searchDestinations);
+router.get('/api/v1/shipping/options', getShippingOptions);
+router.get('/api/v1/shipping/destinations', searchDestinations);
 
 
 

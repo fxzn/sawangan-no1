@@ -11,11 +11,11 @@ const adminRouter = Router();
 adminRouter.use(authMiddleware);
 adminRouter.use(adminMiddleware);
 
-adminRouter.get('/api/admin/users', getAllUsersForAdmin);
-adminRouter.delete('/api/admin/users/:id', deleteUser);
-adminRouter.post('/api/admin/products', addProduct);
-adminRouter.patch('/api/admin/products/:id', uploadProductImageOptional, updateProduct);
+adminRouter.get('/api/v1/admin/users', getAllUsersForAdmin);
+adminRouter.delete('/api/v1/admin/users/:id', deleteUser);
+adminRouter.post('/api/v1/admin/products', addProduct);
+adminRouter.patch('/api/v1/admin/products/:id', uploadProductImageOptional, updateProduct);
 // adminRouter.patch('/api/admin/products/:id', productController.updateProduct);
-adminRouter.delete('/api/admin/products/:id', deleteProduct);
+adminRouter.delete('/api/v1/admin/products/:id', deleteProduct);
 
 export default adminRouter;
