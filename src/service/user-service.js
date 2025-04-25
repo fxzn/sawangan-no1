@@ -382,7 +382,6 @@ const googleAuth = async (googleToken) => {
 
 // get user all untuk admin
 
-
 const getAllUsersForAdmin = async () => {
   return await prismaClient.user.findMany({
     where: {
@@ -427,8 +426,6 @@ const getUserProfile = async (userId) => {
 };
 
 
-
-
 const updateProfile = async (userId, request) => {
   const validated = validate(updateProfileValidation, request); // Validasi: fullName, phone
   
@@ -469,36 +466,6 @@ const updateAvatar = async (userId, avatarFile) => {
   });
 };
 
-// const updateAvatar = async (userId, avatarFile) => {
-//   userId = validate(userUuidValidation, userId);
-
-//   // 1. Hapus avatar lama jika ada
-//   const oldUser = await prismaClient.user.findUnique({
-//     where: { id: userId },
-//     select: { avatar: true }
-//   });
-
-//   if (oldUser?.avatar) {
-//     const oldPath = `public${oldUser.avatar}`;
-//     if (fs.existsSync(oldPath)) {
-//       fs.unlinkSync(oldPath);
-//     }
-//   }
-
-//   // 2. Update database dengan path baru
-//   const avatarUrl = `/uploads/avatars/${avatarFile.filename}`;
-  
-//   return await prismaClient.user.update({
-//     where: { id: userId },
-//     data: { avatar: avatarUrl },
-//     select: {
-//       id: true,
-//       avatar: true
-//     }
-//   });
-// };
-
-
 
 
 const changePassword = async (userId, currentPassword, newPassword, confirmPassword) => {
@@ -524,6 +491,48 @@ const changePassword = async (userId, currentPassword, newPassword, confirmPassw
   });
 };
 
+const deleteUser = async (userId) => {
+  // Validasi input
+  userId = validate(userUuidValidation, userId);
+
+  // Cek apakah user ada
+  const user = await prismaClient.user.findUnique({
+    where: { id: userId },
+    include: {
+      products: {
+        select: {
+          id: true,
+          imageUrl: true
+        }
+      }
+    }
+  });
+
+  if (!user) {
+    throw new ResponseError(404, 'User not found');
+  }
+
+  // Hapus semua gambar produk yang dimiliki user (jika ada)
+  if (user.products.length > 0) {
+    for (const product of user.products) {
+      if (product.imageUrl) {
+        const publicId = product.imageUrl.split('/').pop().split('.')[0];
+        await cloudinary.uploader.destroy(`product_images/${publicId}`);
+      }
+    }
+  }
+
+  // Hapus user dari database
+  await prismaClient.user.delete({
+    where: { id: userId }
+  });
+
+  return {
+    id: userId,
+    message: 'User and associated products deleted successfully'
+  };
+};
+
 
 export default {
   register,
@@ -537,5 +546,6 @@ export default {
   getUserProfile,
   updateProfile,
   updateAvatar,
-  changePassword
+  changePassword,
+  deleteUser
 }

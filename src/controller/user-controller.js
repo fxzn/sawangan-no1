@@ -1,5 +1,6 @@
 import userService from '../service/user-service.js';
-import { googleAuthValidation } from '../validation/user-validation.js';
+import { googleAuthValidation, userUuidValidation } from '../validation/user-validation.js';
+import { validate } from '../validation/validation.js';
 
 export const register = async (req, res, next) => {
   try {
@@ -196,6 +197,20 @@ export const changePassword = async (req, res, next) => {
       req.body.confirmPassword
     );
     res.json({ success: true, message: "Password updated" });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deleteUser = async (req, res, next) => {
+  try {
+    const userId = validate(userUuidValidation, req.params.id);
+    await userService.deleteUser(userId);
+    
+    res.status(200).json({
+      success: true,
+      message: 'User deleted successfully'
+    });
   } catch (error) {
     next(error);
   }

@@ -15,3 +15,23 @@ const upload = multer({
 });
 
 export const uploadProductImage = upload.single('image');
+
+// Optional upload version
+export const uploadProductImageOptional = (req, res, next) => {
+  // Skip if no multipart/form-data content
+  if (!req.headers['content-type']?.includes('multipart/form-data')) {
+    return next();
+  }
+
+  // Handle the upload
+  upload.single('image')(req, res, (err) => {
+    if (err) {
+      // Handle specific multer errors
+      if (err.code === 'LIMIT_UNEXPECTED_FILE' || err.message.includes('Unexpected field')) {
+        return next(); // Skip if no file was uploaded
+      }
+      return next(err); // Pass other errors
+    }
+    next();
+  });
+};
