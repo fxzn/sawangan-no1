@@ -5,7 +5,10 @@
   "main": "src/main.js",
   "scripts": {
     "start": "node src/main.js",
-    "test": "jest"
+    "test": "jest",
+    "dev": "node src/main.js",
+    "build": "echo 'no build'",
+    "postinstall": "prisma generate"
   },
   "jest": {
     "maxConcurrency": 2,
