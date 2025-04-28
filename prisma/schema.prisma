@@ -53,7 +53,7 @@ model Product {
   description     String
   imageUrl        String
   category        Category
-  weight          Float               // bentuk dalam gram
+  weight          Float                 // bentuk dalam kg
   stock           Int
   expiryDate      DateTime?           // nullable untuk non-makanan/minuman
   createdAt       DateTime            @default(now())
@@ -99,21 +99,25 @@ model CartItem {
 
 
 model Order {
-  id                String        @id @default(uuid())
-  userId            String
-  user              User          @relation(fields: [userId], references: [id])
-  items             OrderItem[]
-  status            OrderStatus   @default(PENDING)
-  totalAmount       Float
-  shippingAddress   String
-  shippingCity      String
-  shippingProvince  String
-  shippingPostCode  String
-  shippingCost      Float
-  courier           String
-  paymentMethod     String     
-
-  createdAt         DateTime      @default(now())
+  id                  String        @id @default(uuid())
+  userId              String
+  user                User          @relation(fields: [userId], references: [id])
+  items               OrderItem[]
+  status              OrderStatus   @default(PENDING)
+  totalAmount         Float
+  customerName        String?
+  customerEmail       String?
+  customerPhone       String?
+  shippingAddress     String
+  shippingCity        String
+  shippingProvince    String
+  shippingPostCode    String
+  shippingCost        Float
+  shipping_name       String  
+  service_name        String  
+  paymentMethod       String     
+  estimatedDelivery   String?
+  createdAt           DateTime      @default(now())
 
   @@index([userId])
 }

@@ -5,6 +5,7 @@ import { ResponseError } from '../error/response-error.js';
 import { validate } from '../validation/validation.js';
 import { productIdValidation, updateProductValidation } from '../validation/product-validation.js';
 
+
 export const addProduct = [
   uploadProductImage,
   async (req, res, next) => {
@@ -13,26 +14,39 @@ export const addProduct = [
         throw new Error('Product image is required');
       }
 
+      console.log('Raw request body:', JSON.stringify(req.body, null, 2));
+      console.log('Raw weight:', req.body.weight, 'Type:', typeof req.body.weight);
+
+      // Konversi gram ke kilogram (dibagi 1000)
+      const weightInGrams = parseFloat(req.body.weight);
+      if (isNaN(weightInGrams)) {
+        throw new Error('Weight must be a valid number');
+      }
+      // const weightInKg = weightInGrams / 1000;
+
       const cleanBody = {
         ...req.body,
-        expiryDate: req.body.category === 'Aksesoris' 
-          ? null 
-          : req.body.expiryDate
+        weight: weightInGrams, // Simpan dalam gram
+        price: parseFloat(req.body.price),
+        stock: parseInt(req.body.stock, 10),
+        expiryDate: req.body.category === 'Aksesoris' ? null : req.body.expiryDate
       };
 
-      if (!['Makanan', 'Minuman', 'Aksesoris'].includes(cleanBody.category)) {
-        throw new Error('Invalid category value');
-      }
+      console.log('Processed body:', cleanBody);
 
       const result = await productService.addProduct(
         req.user.id,
-        req.body,
+        cleanBody,
         req.file
       );
 
       res.status(201).json({
         success: true,
-        data: result
+        data: {
+          ...result,
+          weightInGrams: weightInGrams, // Tambahkan berat dalam gram di response
+          weightInKg: result.weight // Berat dalam kg dari database
+        }
       });
     } catch (error) {
       if (req.file?.path) {
@@ -42,6 +56,8 @@ export const addProduct = [
     }
   }
 ];
+
+
 
 export const getAllProducts = async (req, res, next) => {
   try {

@@ -1,13 +1,12 @@
 import { prismaClient } from '../application/database.js';
 import { ResponseError } from '../error/response-error.js';
-import rajaongkirService from './komerce-service.js';
+import komerceService from './komerce-service.js';
 
-
-
-  const calculateCartTotals = (items) => {
+const calculateCartTotals = (items) => {
   return items.reduce((acc, item) => {
     const itemTotal = item.product.price * item.quantity;
-    const itemWeight = item.product.weight * item.quantity;
+    const itemWeight = item.product.weight * item.quantity; // weight sudah dalam kg
+
     
     return {
       subTotal: acc.subTotal + itemTotal,
@@ -22,42 +21,32 @@ import rajaongkirService from './komerce-service.js';
       ]
     };
   }, { subTotal: 0, totalWeight: 0, itemsWithPrice: [] });
-  };
+};
 
-
-  const validateStockAvailability = (items) => {
-    const outOfStockItems = items.filter(item => item.product.stock < item.quantity);
-    
-    if (outOfStockItems.length > 0) {
-      const errorDetails = outOfStockItems.map(item => ({
+const validateStockAvailability = (items) => {
+  const outOfStockItems = items.filter(item => item.product.stock < item.quantity);
+  
+  if (outOfStockItems.length > 0) {
+    throw new ResponseError(400, 'Insufficient stock', {
+      outOfStockItems: outOfStockItems.map(item => ({
         productId: item.product.id,
         productName: item.product.name,
         requested: item.quantity,
         available: item.product.stock
-      }));
-      
-      throw new ResponseError(400, 'Insufficient stock', { outOfStockItems: errorDetails });
-    }
-  };
+      }))
+    });
+  }
+};
 
-
-  const processCheckout = async (userId, checkoutData) => {
+const processCheckout = async (userId, checkoutData) => {
   return await prismaClient.$transaction(async (prisma) => {
-    // Dapatkan cart dengan items
+    // Get cart with items
     const cart = await prisma.cart.findUnique({
       where: { userId },
       include: {
         items: {
           include: {
-            product: {
-              select: {
-                id: true,
-                name: true,
-                price: true,
-                stock: true,
-                weight: true
-              }
-            }
+            product: true
           }
         }
       }
@@ -67,30 +56,110 @@ import rajaongkirService from './komerce-service.js';
       throw new ResponseError(400, 'Cart is empty');
     }
 
-    // 2. Calculate cart totals and validate stock
-    const { subTotal, totalWeight, itemsWithPrice } = calculateCartTotals(cart.items);
-    validateStockAvailability(cart.items);
 
-    // 3. Get shipping options
-    const shippingOptions = await rajaongkirService.getShippingCost(
-    process.env.WAREHOUSE_LOCATION_ID,
-    checkoutData.destinationId,
-    totalWeight,
-    subTotal,
-    checkoutData.paymentMethod === 'COD'
-    );
-    
+    // 2. Dapatkan data user untuk informasi customer
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        fullName: true,
+        email: true,
+        phone: true
+      }
+    });
 
-    // 4. Validate selected shipping service
-    const selectedService = shippingOptions.find(
-      service => service.service_code === checkoutData.shippingService
-    );
-
-    if (!selectedService) {
-      throw new ResponseError(400, 'Selected shipping service not available', { availableServices: shippingOptions });
+    if (!user) {
+      throw new ResponseError(404, 'User not found');
     }
 
-    // 5. Update product stocks
+
+// 3. Calculate cart totals and validate stock
+    // const { subTotal, totalWeight, itemsWithPrice } = calculateCartTotals(cart.items);
+    // validateStockAvailability(cart.items);
+
+    const { subTotal, totalWeight, itemsWithPrice } = calculateCartTotals(cart.items);
+
+
+// 4. Get shipping options
+    const shippingOptions = await komerceService.calculateShippingCost({
+      shipper_destination_id: process.env.WAREHOUSE_LOCATION_ID,
+      receiver_destination_id: checkoutData.destinationId,
+      weight: totalWeight,
+      item_value: subTotal,
+      cod: checkoutData.paymentMethod === 'COD'
+    });
+
+    // Validate selected shipping service
+    console.log('Available shipping options:', JSON.stringify(shippingOptions, null, 2));
+    console.log('Requested service:', {
+      courier: checkoutData.courier,
+      service: checkoutData.shippingService
+    });
+
+
+
+    // 5. Validate selected shipping service
+    // const selectedService = shippingOptions.find(service => {
+    //   const normalize = (str) => str ? str.toString().trim().toLowerCase() : '';
+
+
+    //   console.log('Comparing:', {
+    //     available: `${availableCourier} - ${availableService}`,
+    //     requested: `${requestedCourier} - ${requestedService}`
+    //   });
+    //   return (
+    //     normalize(service.shipping_name) === normalize(checkoutData.courier) && 
+    //     normalize(service.service_name) === normalize(checkoutData.shippingService)
+    //   );
+    // });
+
+    const selectedService = shippingOptions.find(service => {
+      const normalize = (str) => str ? str.toString().trim().toLowerCase() : '';
+      
+      const availableCourier = normalize(service.shipping_name);
+      const availableService = normalize(service.service_name);
+      const requestedCourier = normalize(checkoutData.courier);
+      const requestedService = normalize(checkoutData.shippingService);
+    
+      console.log('Comparing:', {
+        available: `${availableCourier} - ${availableService}`,
+        requested: `${requestedCourier} - ${requestedService}`
+      });
+    
+      return availableCourier === requestedCourier && 
+             availableService === requestedService;
+    });
+
+    // if (!selectedService) {
+    //   console.error('Shipping service validation failed. Details:', {
+    //     requested: {
+    //       courier: checkoutData.courier,
+    //       service: checkoutData.shippingService
+    //     },
+    //     availableOptions: shippingOptions.map(opt => ({
+    //       courier: opt.shipping_name,
+    //       service: opt.service_name,
+    //       price: opt.price,
+    //       etd: opt.etd
+    //     }))
+    //   });
+
+    //   throw new ResponseError(400, 'Selected shipping service not available', {
+    //     availableServices: shippingOptions,
+    //     requestedService: {
+    //       courier: checkoutData.courier,
+    //       service: checkoutData.shippingService
+    //     }
+    //   });
+    // }
+
+    if (!selectedService) {
+      throw new ResponseError(400, 'Selected shipping service not available', {
+        availableServices: shippingOptions
+      });
+    }
+
+
+ // 6. Update product stocks
     await Promise.all(
       cart.items.map(item => 
         prisma.product.update({
@@ -100,35 +169,51 @@ import rajaongkirService from './komerce-service.js';
       )
     );
 
-    // 6. Create order
+// 7. Create order dengan semua field wajib
     const order = await prisma.order.create({
       data: {
         userId,
-        subTotal,
-        shippingCost: selectedService.price,
-        totalAmount: subTotal + selectedService.price,
+        items: {
+          create: itemsWithPrice
+        },
         status: 'PENDING',
+        totalAmount: subTotal + selectedService.price,
+        customerName: user.fullName || 'Customer', // Wajib diisi
+        customerEmail: user.email, // Wajib diisi
+        customerPhone: user.phone || '', // Wajib diisi, berikan default value jika null
         shippingAddress: checkoutData.shippingAddress,
-        destinationId: checkoutData.destinationId,
-        courier: selectedService.courier_name,
-        shippingService: selectedService.service_name,
-        estimatedDelivery: selectedService.etd,
+        shippingCity: checkoutData.shippingCity,
+        shippingProvince: checkoutData.shippingProvince,
+        shippingPostCode: checkoutData.shippingPostCode,
+        shippingCost: selectedService.price,
+        shipping_name: selectedService.shipping_name,
+        service_name: selectedService.service_name,
         paymentMethod: checkoutData.paymentMethod,
-        items: { create: itemsWithPrice }
+        estimatedDelivery: selectedService.etd || '1-3 days' // Berikan default value jika kosong
       },
-      include: { items: true }
+      include: {
+        items: {
+          include: {
+            product: {
+              select: {
+                id: true,
+                name: true,
+                price: true,
+                imageUrl: true
+              }
+            }
+          }
+        }
+      }
     });
 
-
-    // 7. Clear cart
+// 8. Clear cart
     await prisma.cartItem.deleteMany({ where: { cartId: cart.id } });
 
     return order;
-
-
   });
 };
 
 export default {
-    processCheckout 
+  processCheckout 
 };

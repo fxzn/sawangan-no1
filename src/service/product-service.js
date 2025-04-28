@@ -3,31 +3,32 @@ import { addProductValidation, productIdValidation, updateProductValidation } fr
 import { prismaClient } from '../application/database.js';
 import { cloudinary } from '../middleware/cloudinary-middleware.js';
 
+
 const addProduct = async (adminId, request, imageFile) => {
+  // Konversi gram ke kilogram
+  const weightInKg = parseFloat(request.weight) / 1000;
+  
   const validated = validate(addProductValidation, {
     ...request,
-    category: request.category.charAt(0).toUpperCase() + request.category.slice(1).toLowerCase(),
-    price: parseFloat(request.price),
-    weight: parseFloat(request.weight),
-    stock: parseInt(request.stock),
-    expiryDate: request.expiryDate || null
+    weight: weightInKg, // Simpan dalam kg
+    category: request.category.charAt(0).toUpperCase() + 
+             request.category.slice(1).toLowerCase(),
+    expiryDate: request.category === 'Aksesoris' ? null : request.expiryDate
   });
 
+  // Validasi weight
+  if (validated.weight <= 0) {
+    throw new Error(`Weight must be positive: ${request.weight} grams`);
+  }
+
   const uploadResult = await cloudinary.uploader.upload(imageFile.path, {
-    folder: 'product_images',
-    transformation: [{ width: 800, height: 800, crop: 'limit', quality: 'auto' }]
+    folder: 'product_images'
   });
 
   return await prismaClient.product.create({
     data: {
-      name: validated.name,
-      price: validated.price,
-      description: validated.description,
+      ...validated,
       imageUrl: uploadResult.secure_url,
-      category: validated.category,
-      weight: validated.weight,
-      stock: validated.stock,
-      expiryDate: validated.expiryDate,
       addedById: adminId
     },
     select: {
@@ -37,13 +38,14 @@ const addProduct = async (adminId, request, imageFile) => {
       description: true,
       imageUrl: true,
       category: true,
-      weight: true,
+      weight: true, // Dalam kg
       stock: true,
       expiryDate: true,
       createdAt: true
     }
   });
 };
+
 
 
 const getAllProducts = async () => {
@@ -73,8 +75,9 @@ const getAllProducts = async () => {
 };
 
 
+
 const getProductById = async (id) => {
-  return await prismaClient.product.findUnique({
+  const product = await prismaClient.product.findUnique({
     where: { id },
     select: {
       id: true,
@@ -95,14 +98,26 @@ const getProductById = async (id) => {
       }
     }
   });
+
+  if (!product) return null;
+
+  return {
+    ...product,
+    weightInGrams: product.weight * 1000, // Tambahkan konversi ke gram
+    weight: product.weight // Nilai asli dalam kg
+  };
 };
 
 
 
-
 const updateProduct = async (productId, request, imageFile) => {
-  // Validasi input
   productId = validate(productIdValidation, productId);
+  
+  // Jika ada weight, konversi gram ke kg
+  if (request.weight) {
+    request.weight = parseFloat(request.weight) / 1000;
+  }
+
   request = validate(updateProductValidation, request);
 
   // Handle validasi khusus
@@ -110,35 +125,11 @@ const updateProduct = async (productId, request, imageFile) => {
     throw new ResponseError(400, "Aksesoris products cannot have expiryDate");
   }
 
-  // Handle image upload
-  let updateData = { ...request };
-  
-  if (imageFile) {
-    const uploadResult = await cloudinary.uploader.upload(imageFile.path, {
-      folder: 'product_images'
-    });
-    updateData.imageUrl = uploadResult.secure_url;
 
-    // Delete old image
-    const oldProduct = await prismaClient.product.findUnique({
-      where: { id: productId }
-    });
-    if (oldProduct?.imageUrl) {
-      const publicId = oldProduct.imageUrl.split('/').pop().split('.')[0];
-      await cloudinary.uploader.destroy(`product_images/${publicId}`);
-    }
-  }
 
-  // Konversi tipe data
-  if (updateData.price) updateData.price = parseFloat(updateData.price);
-  if (updateData.weight) updateData.weight = parseFloat(updateData.weight);
-  if (updateData.stock) updateData.stock = parseInt(updateData.stock);
-  if (updateData.expiryDate) updateData.expiryDate = new Date(updateData.expiryDate);
-
-  // Update product
   return await prismaClient.product.update({
     where: { id: productId },
-    data: updateData,
+    data: request,
     select: {
       id: true,
       name: true,

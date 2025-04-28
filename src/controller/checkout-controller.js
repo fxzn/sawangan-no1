@@ -1,7 +1,6 @@
-// import orderService from '../service/order-service.js';
+import { ResponseError } from '../error/response-error.js';
 import checkoutService from '../service/checkout-service.js';
 import komerceService from '../service/komerce-service.js';
-
 import { checkoutValidation } from '../validation/checkout-validation.js';
 import { validate } from '../validation/validation.js';
 
@@ -23,78 +22,65 @@ export const checkout = async (req, res, next) => {
 };
 
 
+// controller/checkout-controller.js
 export const getShippingOptions = async (req, res, next) => {
-    try {
-      const { destinationId, weight, itemValue = 0, cod = false } = req.query;
-      
-      const options = await komerceService.getShippingCost(
-        process.env.WAREHOUSE_LOCATION_ID,
-        destinationId,
-        Number(weight),
-        Number(itemValue),
-        cod === 'true'
-        
-        // originCityId,
-        // cityId,
-        // weight,
-        // ['jne', 'tiki', 'pos'] // Semua kurir
-      );
-      
-      res.json({
-        success: true,
-        data: options
-      });
-    } catch (error) {
-      next(error);
-    }
-  };
-
-
-
-  // controller/checkout-controller.js
-// export const searchDestinations = async (req, res, next) => {
-//   try {
-//     const { keyword } = req.query;
-
-//     if (!keyword) {
-//       throw new ResponseError(400, 'Keyword parameter is required');
-//     }
-
-//     const results = await komerceService.searchDestinations(keyword);
-
-//     res.json({
-//       success: true,
-//       data: results,
-//       meta: {
-//         searchedKeyword: keyword,
-//         resultCount: results.length
-//       }
-//     });
-
-//   } catch (error) {
-//     // Log error detail untuk debugging
-//     console.error('Search Destination Controller Error:', {
-//       query: req.query,
-//       error: error.stack
-//     });
+  try {
+    // Validasi dan parse parameter
     
+    const { 
+      shipper_destination_id,
+      receiver_destination_id,
+      weight,
+      item_value = 0,
+      cod = 'no'
+    } = req.query;
 
-//      // Format error response sesuai dokumentasi Komerce
-//     if (error.response?.data) {
-//       return res.status(error.status || 500).json({
-//         success: false,
-//         error: {
-//           code: error.response.data.code || 'API_ERROR',
-//           message: error.response.data.message,
-//           details: error.response.data.errors
-//         }
-//       });
-//     }
+    if (!shipper_destination_id || !receiver_destination_id || !weight) {
+      throw new ResponseError(400, 'Missing required parameters');
+    }
+
+    // Parse nilai
+    const params = {
+      shipper_destination_id,
+      receiver_destination_id,
+      weight: parseFloat(weight),
+      item_value: parseInt(item_value) || 0,
+      cod: cod === 'yes'
+    };
+
+    // Debug log
+    console.log('Process shipping options with:', params);
+
+    const options = await komerceService.calculateShippingCost(params);
+
+    res.json({
+      success: true,
+      data: options,
+      meta: {
+        currency: 'IDR',
+        timestamp: new Date().toISOString()
+      }
+    });
+
+  } catch (error) {
+    // Format error response
+    const statusCode = error.status || 500;
+    const errorData = {
+      code: error.code || 'SHIPPING_CALCULATION_ERROR',
+      message: error.message,
+      ...(error.details && { details: error.details })
+    };
+
+    console.error(`Shipping Options Error [${statusCode}]:`, errorData);
+
+    res.status(statusCode).json({
+      success: false,
+      error: errorData
+    });
+  }
+};
 
 
-//     next(error);
-//   }
-// };
 
 
 export const searchDestinations = async (req, res, next) => {
@@ -102,24 +88,25 @@ export const searchDestinations = async (req, res, next) => {
     const { keyword } = req.query;
 
     // Validasi lebih ketat
-    if (!keyword || typeof keyword !== 'string') {
-      return res.status(400).json({
-        success: false,
-        error: {
-          code: 'INVALID_INPUT',
-          message: 'Keyword must be a string'
-        }
-      });
+    if (!keyword || typeof keyword !== 'string' || keyword.trim().length < 3) {
+      throw new ResponseError(400, 'Keyword must be a string with at least 3 characters')
+      // return res.status(400).json({
+      //   success: false,
+      //   error: {
+      //     code: 'INVALID_INPUT',
+      //     message: 'Keyword must be a string'
+      //   }
+      // });
     }
 
-    const results = await komerceService.searchDestinations(keyword);
+    const results = await komerceService.searchDestinations(keyword.trim());
 
     // Response format konsisten
     return res.json({
       success: true,
       data: results,
       meta: {
-        searchedKeyword: keyword,
+        searchedKeyword: keyword.trim,
         resultCount: results.length,
         timestamp: new Date().toISOString()
       }
@@ -146,5 +133,4 @@ export const searchDestinations = async (req, res, next) => {
     return res.status(statusCode).json(errorResponse);
   }
 };
-
 
