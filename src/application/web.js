@@ -4,11 +4,6 @@ import { errorMiddleware } from '../middleware/error-middleware.js';
 import publicRoute from '../route/public-route.js';
 import router from '../route/api.js';
 import adminRouter from '../route/admin-route.js';
-var cors = require('cors')
-
-
-
-app.use(cors())
 
 export const web = express();
 
