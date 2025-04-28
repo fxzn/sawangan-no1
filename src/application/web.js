@@ -4,15 +4,16 @@ import { errorMiddleware } from '../middleware/error-middleware.js';
 import publicRoute from '../route/public-route.js';
 import router from '../route/api.js';
 import adminRouter from '../route/admin-route.js';
+var cors = require('cors')
 
 
 
-
+app.use(cors())
 
 export const web = express();
 
 web.use(express.json());
-web.use(cors());
+web.use(cors())
 
 web.use(publicRoute);
 web.use(router);
