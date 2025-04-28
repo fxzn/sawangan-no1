@@ -10,7 +10,20 @@ export const checkoutValidation = Joi.object({
   // courier: Joi.string().valid('NINJA', 'SAP', 'JNT').required(),  
   shippingService: Joi.string().required(),
   courier: Joi.string().required(),
-  paymentMethod: Joi.string().valid('CREDIT_CARD', 'PAYPAL', 'BANK_TRANSFER', 'COD').required(),
+  // paymentMethod: Joi.string().valid('CREDIT_CARD', 'PAYPAL', 'BANK_TRANSFER', 'COD').required(),
+  paymentMethod: Joi.string()
+  .valid(
+    'CREDIT_CARD',
+    'BANK_TRANSFER', 
+    'MANDIRI_BILL',
+    'QRIS',
+    'COD'
+  )
+  .required()
+  .messages({
+    'any.only': 'Payment method must be one of: CREDIT_CARD, BANK_TRANSFER, MANDIRI_BILL, QRIS, COD',
+    'string.empty': 'Payment method is required'
+  }),
   notes: Joi.string().max(500).optional()
 }).options({ abortEarly: false });
 
