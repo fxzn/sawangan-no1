@@ -4,17 +4,20 @@ import komerceService from '../service/komerce-service.js';
 import { checkoutValidation } from '../validation/checkout-validation.js';
 import { validate } from '../validation/validation.js';
 
+
+
 export const checkout = async (req, res, next) => {
   try {
     const userId = req.user.id;
     const request = validate(checkoutValidation, req.body);
-    
-    // const order = await orderService.processCheckout(userId, request);
     const order = await checkoutService.processCheckout(userId, request);
     
     res.status(201).json({
       success: true,
-      data: order
+      data: {
+        ...order,
+        paymentToken: undefined // Hide sensitive data
+      }
     });
   } catch (error) {
     next(error);

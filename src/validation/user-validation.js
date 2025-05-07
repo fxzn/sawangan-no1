@@ -40,39 +40,28 @@ const forgotPasswordValidation = Joi.object({
     .messages({ 'any.only': 'Passwords do not match' })
 });
 
+// const googleAuthValidation = Joi.object({
+//   token: Joi.string().required().messages({
+//     'string.empty': 'Google token is required',
+//     'any.required': 'Invalid Google token'
+//   })
+// });
+
 const googleAuthValidation = Joi.object({
-  token: Joi.string().required().messages({
-    'string.empty': 'Google token is required',
-    'any.required': 'Invalid Google token'
+  access_token: Joi.string().required().messages({
+    'string.empty': 'Google access token is required',
+    'any.required': 'Invalid Google access token'
   })
 });
 
-const updateProfileValidation = Joi.object({
-  fullName: Joi.string().max(100).optional(),
-  phone: Joi.string().max(20).optional()
-});
 
-const changePasswordValidation = Joi.object({
-  currentPassword: Joi.string().required(),
-  newPassword: Joi.string().min(8).required(),
-  confirmPassword: Joi.string().valid(Joi.ref('newPassword')).required()
-    .messages({ 'any.only': 'Passwords do not match' })
-});
-
-const avatarValidation = Joi.object({
-  avatar: Joi.any()
-    .meta({ swaggerType: 'file' })
-    .description('Image file (JPEG/PNG/WEBP) max 5MB')
-});
 
 export  {
     registerValidation,
     loginValidation,
     userUuidValidation,
-    updateProfileValidation,
     forgotPasswordValidation,
     resetPasswordValidation,
-    googleAuthValidation,
-    changePasswordValidation,
-    avatarValidation
+    googleAuthValidation
+
 };

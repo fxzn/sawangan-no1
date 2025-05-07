@@ -3,11 +3,12 @@ import { v4 as uuid } from 'uuid';
 import { prismaClient } from '../application/database.js';
 import jwt from 'jsonwebtoken';
 import { validate } from '../validation/validation.js';
-import { loginValidation, registerValidation, updateProfileValidation, userUuidValidation,  } from '../validation/user-validation.js';
+import { loginValidation, registerValidation, userUuidValidation,  } from '../validation/user-validation.js';
 import { ResponseError } from '../error/response-error.js';
 import { sendResetPasswordEmail } from '../utils/email-sender.js';
 import { compareTokens, generateResetToken, hashToken } from '../utils/token-utils.js';
 import { verifyGoogleToken } from '../utils/google-oauth.js';
+import { cloudinary } from '../middleware/cloudinary-middleware.js';
 
 
 
@@ -314,27 +315,82 @@ const resetPassword = async (token, password, confirmPassword) => {
 
 
 
+// const googleAuth = async (googleToken) => {
+//   try {
+//     // 1. Verifikasi token Google
+//     const { name, email, picture } = await verifyGoogleToken(googleToken);
+
+//     // 2. Buat atau update user
+//     const user = await prismaClient.user.upsert({
+//       where: { email },
+//       update: { 
+//         avatar: picture || null // Update avatar saja
+//       },
+//       create: {
+//         id: uuid(),
+//         email,
+//         fullName: name || null, // Optional
+//         phone: null,            // Optional
+//         avatar: picture || null,
+//         provider: 'GOOGLE',
+//         role: 'USER',          // Default role
+//         isVerified: true       // Akun Google sudah terverifikasi
+//       },
+//       select: {
+//         id: true,
+//         fullName: true,
+//         email: true,
+//         phone: true,
+//         avatar: true,
+//         role: true,
+//         provider: true,
+//         isVerified: true 
+//       }
+//     });
+
+//     // 3. Generate JWT
+//     const token = jwt.sign(
+//       { id: user.id, email: user.email, role: user.role },
+//       process.env.JWT_SECRET,
+//       { expiresIn: '1d' }
+//     );
+
+//     // 4. Update token di database
+//     await prismaClient.user.update({
+//       where: { id: user.id },
+//       data: { token }
+//     });
+
+//     return {
+//       id: user.id,
+//       fullName: user.fullName,
+//       email: user.email,
+//       phone: user.phone,
+//       role: user.role,
+//       avatar: user.avatar,
+//       token,
+//       provider: user.provider
+//     };
+
+//   } catch (error) {
+//     console.error('Google Auth Error:', error);
+//     throw new Error(error.message || 'Autentikasi Google gagal');
+//   }
+// };
+
+
+
+
+// get user all untuk admin
+
 const googleAuth = async (googleToken) => {
   try {
     // 1. Verifikasi token Google
     const { name, email, picture } = await verifyGoogleToken(googleToken);
 
-    // 2. Buat atau update user
-    const user = await prismaClient.user.upsert({
+    // 2. Cek apakah email sudah ada
+    let user = await prismaClient.user.findUnique({
       where: { email },
-      update: { 
-        avatar: picture || null // Update avatar saja
-      },
-      create: {
-        id: uuid(),
-        email,
-        fullName: name || null, // Optional
-        phone: null,            // Optional
-        avatar: picture || null,
-        provider: 'GOOGLE',
-        role: 'USER',          // Default role
-        isVerified: true       // Akun Google sudah terverifikasi
-      },
       select: {
         id: true,
         fullName: true,
@@ -342,19 +398,45 @@ const googleAuth = async (googleToken) => {
         phone: true,
         avatar: true,
         role: true,
-        provider: true,
-        isVerified: true 
+        provider: true
       }
     });
 
-    // 3. Generate JWT
+    // 3. Jika user belum ada, buat baru
+    if (!user) {
+      user = await prismaClient.user.create({
+        data: {
+          id: uuid(),
+          email,
+          fullName: name || email.split('@')[0], // Default name jika tidak ada
+          avatar: picture || null,
+          provider: 'GOOGLE',
+          role: 'USER',
+          isVerified: true
+        },
+        select: {
+          id: true,
+          fullName: true,
+          email: true,
+          phone: true,
+          avatar: true,
+          role: true,
+          provider: true
+        }
+      });
+    } else if (user.provider !== 'GOOGLE') {
+      // Jika user sudah ada tapi bukan dari Google
+      throw new ResponseError(400, `Email already registered with ${user.provider} provider`);
+    }
+
+    // 4. Generate JWT
     const token = jwt.sign(
       { id: user.id, email: user.email, role: user.role },
       process.env.JWT_SECRET,
       { expiresIn: '1d' }
     );
 
-    // 4. Update token di database
+    // 5. Update token di database
     await prismaClient.user.update({
       where: { id: user.id },
       data: { token }
@@ -373,14 +455,11 @@ const googleAuth = async (googleToken) => {
 
   } catch (error) {
     console.error('Google Auth Error:', error);
-    throw new Error(error.message || 'Autentikasi Google gagal');
+    throw new ResponseError(401, error.message || 'Google authentication failed');
   }
 };
 
 
-
-
-// get user all untuk admin
 
 const getAllUsersForAdmin = async () => {
   return await prismaClient.user.findMany({
@@ -405,97 +484,11 @@ const getAllUsersForAdmin = async () => {
 
 
 
-const getUserProfile = async (userId) => {
-  userId = validate(userUuidValidation, userId);
-  
-  const user = await prismaClient.user.findUnique({
-    where: { id: userId },
-    select: {
-      id: true,
-      fullName: true,
-      email: true,
-      phone: true,
-      avatar: true,
-      role: true,
-      provider: true
-    }
-  });
-
-  if (!user) throw new ResponseError(404, "User not found");
-  return user;
-};
-
-
-const updateProfile = async (userId, request) => {
-  const validated = validate(updateProfileValidation, request); // Validasi: fullName, phone
-  
-  return await prismaClient.user.update({
-    where: { id: userId },
-    data: {
-      fullName: validated.fullName,
-      phone: validated.phone
-    },
-    select: { id: true, fullName: true, phone: true, email: true }
-  });
-};
-
-
-
-const updateAvatar = async (userId, avatarFile) => {
-  userId = validate(userUuidValidation, userId);
-
-  // 1. Hapus avatar lama dari Cloudinary jika ada
-  const oldUser = await prismaClient.user.findUnique({
-    where: { id: userId },
-    select: { avatar: true }
-  });
-
-  if (oldUser?.avatar) {
-    const publicId = oldUser.avatar.split('/').pop().split('.')[0];
-    await cloudinary.uploader.destroy(`user_avatars/${publicId}`);
-  }
-
-  // 2. Gunakan URL dari Cloudinary yang sudah di-upload oleh middleware
-  return await prismaClient.user.update({
-    where: { id: userId },
-    data: { avatar: avatarFile.path }, // path berisi secure_url dari Cloudinary
-    select: {
-      id: true,
-      avatar: true
-    }
-  });
-};
-
-
-
-const changePassword = async (userId, currentPassword, newPassword, confirmPassword) => {
-  // Validasi
-  if (newPassword !== confirmPassword) {
-    throw new ResponseError(400, "New password and confirmation mismatch");
-  }
-
-  const user = await prismaClient.user.findUnique({
-    where: { id: userId },
-    select: { password: true }
-  });
-
-  // Verifikasi password lama
-  const isMatch = await bcrypt.compare(currentPassword, user.password);
-  if (!isMatch) throw new ResponseError(401, "Current password is wrong");
-
-  // Update password baru
-  const hashedPassword = await bcrypt.hash(newPassword, 10);
-  await prismaClient.user.update({
-    where: { id: userId },
-    data: { password: hashedPassword }
-  });
-};
-
 const deleteUser = async (userId) => {
   // Validasi input
   userId = validate(userUuidValidation, userId);
 
-  // Cek apakah user ada
+  // Cek apakah user ada dan dapatkan semua relasinya
   const user = await prismaClient.user.findUnique({
     where: { id: userId },
     include: {
@@ -504,7 +497,20 @@ const deleteUser = async (userId) => {
           id: true,
           imageUrl: true
         }
-      }
+      },
+      carts: {
+        include: {
+          items: true
+        }
+      },
+      orders: {
+        include: {
+          items: true,
+          paymentLogs: true,
+          reviews: true
+        }
+      },
+      reviews: true
     }
   });
 
@@ -512,7 +518,7 @@ const deleteUser = async (userId) => {
     throw new ResponseError(404, 'User not found');
   }
 
-  // Hapus semua gambar produk yang dimiliki user (jika ada)
+  // 1. Hapus semua gambar produk yang dimiliki user
   if (user.products.length > 0) {
     for (const product of user.products) {
       if (product.imageUrl) {
@@ -522,14 +528,79 @@ const deleteUser = async (userId) => {
     }
   }
 
-  // Hapus user dari database
+  // 2. Hapus semua cart items dan carts
+  if (user.carts.length > 0) {
+    // Delete cart items first
+    await prismaClient.cartItem.deleteMany({
+      where: {
+        cartId: {
+          in: user.carts.map(cart => cart.id)
+        }
+      }
+    });
+    
+    // Then delete the carts
+    await prismaClient.cart.deleteMany({
+      where: {
+        userId: userId
+      }
+    });
+  }
+
+  // 3. Hapus semua order-related data
+  if (user.orders.length > 0) {
+    // Delete payment logs first
+    await prismaClient.paymentLog.deleteMany({
+      where: {
+        orderId: {
+          in: user.orders.map(order => order.id)
+        }
+      }
+    });
+
+    // Delete order items
+    await prismaClient.orderItem.deleteMany({
+      where: {
+        orderId: {
+          in: user.orders.map(order => order.id)
+        }
+      }
+    });
+
+    // Delete order reviews
+    await prismaClient.review.deleteMany({
+      where: {
+        orderId: {
+          in: user.orders.map(order => order.id)
+        }
+      }
+    });
+
+    // Finally delete the orders
+    await prismaClient.order.deleteMany({
+      where: {
+        userId: userId
+      }
+    });
+  }
+
+  // 4. Hapus reviews yang dibuat user
+  if (user.reviews.length > 0) {
+    await prismaClient.review.deleteMany({
+      where: {
+        userId: userId
+      }
+    });
+  }
+
+  // 5. Sekarang baru hapus user
   await prismaClient.user.delete({
     where: { id: userId }
   });
 
   return {
     id: userId,
-    message: 'User and associated products deleted successfully'
+    message: 'User and all associated data deleted successfully'
   };
 };
 
@@ -543,9 +614,5 @@ export default {
   resetPassword,
   googleAuth,
   getAllUsersForAdmin,
-  getUserProfile,
-  updateProfile,
-  updateAvatar,
-  changePassword,
   deleteUser
 }

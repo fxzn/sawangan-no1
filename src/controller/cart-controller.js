@@ -9,9 +9,9 @@ export const getCart = async (req, res, next) => {
     res.status(200).json({
       success: true,
       data: cart
-    });
+    })
   } catch (error) {
-    next(error);
+    next(error)
   }
 };
 

@@ -87,15 +87,33 @@ export const resetPassword = async (req, res, next) => {
 };
 
 
+// export const googleAuth = async (req, res, next) => {
+//   try {
+//     const { token } = await googleAuthValidation.validateAsync(req.body);
+//     const data = await userService.googleAuth(token);
+    
+//     res.status(200).json({
+//       data
+//     });
+//   } catch (error) {
+//     next(error);
+//   }
+// };
+
+
 export const googleAuth = async (req, res, next) => {
   try {
-    const { token } = await googleAuthValidation.validateAsync(req.body);
-    const data = await userService.googleAuth(token);
+    // Gunakan field yang sesuai dengan frontend
+    const { access_token: idToken } = await googleAuthValidation.validateAsync(req.body);
+    
+    console.log('Received token type:', typeof idToken, 'Length:', idToken.length);
+    const data = await userService.googleAuth(idToken);
     
     res.status(200).json({
       data
     });
   } catch (error) {
+    console.error('Controller error:', error);
     next(error);
   }
 };
@@ -115,92 +133,6 @@ export const getAllUsersForAdmin = async (req, res, next) => {
 };
 
 
-
-export const getProfile = async (req, res, next) => {
-  try {
-    const user = await userService.getUserProfile(req.user.id);
-    res.status(200).json({
-      success: true,
-      data: user
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-
-export const updateProfile = async (req, res, next) => {
-  try {
-    const data = await userService.updateProfile(req.user.id, req.body);
-    res.json({ success: true, data });
-  } catch (error) {
-    next(error);
-  }
-};
-
-
-
-export const uploadAvatar = async (req, res, next) => {
-  try {
-    if (!req.file) {
-      throw new ResponseError(400, 'Avatar file is required');
-    }
-
-    const result = await userService.updateAvatar(req.user.id, req.file);
-    
-    res.status(200).json({
-      success: true,
-      data: {
-        avatarUrl: result.avatar
-      }
-    });
-  } catch (error) {
-    // Cleanup jika error terjadi
-    if (req.file?.public_id) {
-      await cloudinary.uploader.destroy(req.file.public_id);
-    }
-    next(error);
-  }
-};
-
-
-// export const uploadAvatar = async (req, res, next) => {
-//   try {
-//     if (!req.file) {
-//       throw new ResponseError(400, 'Avatar file is required');
-//     }
-
-//     const result = await userService.updateAvatar(req.user.id, req.file);
-    
-//     res.status(200).json({
-//       success: true,
-//       data: {
-//         avatarUrl: result.avatar
-//       }
-//     });
-//   } catch (error) {
-//     // Cleanup jika error terjadi
-//     if (req.file?.path && fs.existsSync(req.file.path)) {
-//       fs.unlinkSync(req.file.path);
-//     }
-//     next(error);
-//   }
-// };
-
-
-export const changePassword = async (req, res, next) => {
-  try {
-    await userService.changePassword(
-      req.user.id, 
-      req.body.currentPassword,
-      req.body.newPassword,
-      req.body.confirmPassword
-    );
-    res.json({ success: true, message: "Password updated" });
-  } catch (error) {
-    next(error);
-  }
-};
 
 export const deleteUser = async (req, res, next) => {
   try {

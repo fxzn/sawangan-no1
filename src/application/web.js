@@ -5,6 +5,7 @@ import publicRoute from '../route/public-route.js';
 import router from '../route/api.js';
 import adminRouter from '../route/admin-route.js';
 
+
 export const web = express();
 
 web.use(express.json());

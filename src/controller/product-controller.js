@@ -29,9 +29,13 @@ export const addProduct = [
         weight: weightInGrams, // Simpan dalam gram
         price: parseFloat(req.body.price),
         stock: parseInt(req.body.stock, 10),
-        expiryDate: req.body.category === 'Aksesoris' ? null : req.body.expiryDate
       };
 
+       // Jika kategori Aksesoris, hapus expiryDate dari body
+       if (req.body.category === 'Aksesoris') {
+        delete cleanBody.expiryDate;
+      }
+      
       console.log('Processed body:', cleanBody);
 
       const result = await productService.addProduct(
@@ -89,19 +93,48 @@ export const getProductById = async (req, res, next) => {
 
 
 
+// export const updateProduct = async (req, res, next) => {
+//   try {
+//     const productId = validate(productIdValidation, req.params.id);
+//     const request = validate(updateProductValidation, req.body);
+
+//     if (req.body.imageUrl) {
+//       throw new ResponseError(400, "Use image upload to change product image");
+//     }
+
+//     const result = await productService.updateProduct(
+//       productId,
+//       request,
+//       req.file
+//     );
+
+//     res.status(200).json({
+//       success: true,
+//       data: result
+//     });
+//   } catch (error) {
+//     if (req.file?.path) {
+//       await cloudinary.uploader.destroy(req.file.filename);
+//     }
+//     next(error);
+//   }
+// };
+
 export const updateProduct = async (req, res, next) => {
   try {
-    const productId = validate(productIdValidation, req.params.id);
-    const request = validate(updateProductValidation, req.body);
+    // Hapus validasi ganda, cukup validasi di service saja
+    const productId = req.params.id;
+    const request = req.body;
 
-    if (req.body.imageUrl) {
-      throw new ResponseError(400, "Use image upload to change product image");
-    }
+    // Debugging log
+    console.log('Product ID:', productId);
+    console.log('Request body:', request);
+    console.log('Uploaded file:', req.file);
 
     const result = await productService.updateProduct(
       productId,
       request,
-      req.file
+      req.file // File akan dihandle oleh middleware
     );
 
     res.status(200).json({
@@ -109,6 +142,7 @@ export const updateProduct = async (req, res, next) => {
       data: result
     });
   } catch (error) {
+    // Cleanup file jika error
     if (req.file?.path) {
       await cloudinary.uploader.destroy(req.file.filename);
     }
@@ -122,11 +156,11 @@ export const updateProduct = async (req, res, next) => {
 export const deleteProduct = async (req, res, next) => {
   try {
     const productId = validate(productIdValidation, req.params.id);
-    await productService.deleteProduct(productId);
+    const result = await productService.deleteProduct(productId);
     
     res.status(200).json({
       success: true,
-      message: 'Product deleted successfully'
+      data: result
     });
   } catch (error) {
     next(error);
