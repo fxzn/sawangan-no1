@@ -78,7 +78,6 @@ const getOrderDetail = async (userId, orderId) => {
         status: true,
         trackingNumber: true,
         shipping_name: true,
-        paymentStatus: true,
         totalAmount: true,
         shippingAddress: true,
         shippingCity: true,
@@ -88,21 +87,40 @@ const getOrderDetail = async (userId, orderId) => {
         customerPhone: true,
         shippingCost: true,
         estimatedDelivery: true,
-        paymentMethod: true,
         paymentUrl: true,
+        midtransResponse: true, // Tambahkan ini
         shippedAt: true,
         completedAt: true,
+        cancelledAt: true,
         items: {
           select: {
             quantity: true,
             price: true,
             productName: true,
+            weight: true,
             product: {
               select: {
                 name: true,
                 imageUrl: true
               }
             }
+          }
+        },
+        paymentMethod: true,
+        paymentStatus: true,
+        paidAt: true,
+        paymentVaNumber: true,
+        paymentBank: true,
+        midtransOrderId: true,
+        paymentLogs: {
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+          select: {
+            status: true,
+            paymentMethod: true,
+            amount: true,
+            paymentTime: true,
+            transactionId: true
           }
         }
       }
@@ -112,7 +130,28 @@ const getOrderDetail = async (userId, orderId) => {
       throw new ResponseError(404, 'Order not found or access denied');
     }
 
-    // Get tracking info if order is shipped and has tracking number
+    // Parse midtrans response jika ada
+    let paymentDetails = null;
+    if (order.midtransResponse) {
+      try {
+        const midtransData = JSON.parse(order.midtransResponse);
+        paymentDetails = {
+          method: midtransData.payment_type,
+          bank: midtransData.va_numbers?.[0]?.bank || midtransData.bank,
+          vaNumber: midtransData.va_numbers?.[0]?.va_number,
+          store: midtransData.store,
+          billKey: midtransData.bill_key,
+          billerCode: midtransData.biller_code,
+          transactionTime: midtransData.transaction_time,
+          settlementTime: midtransData.settlement_time,
+          fraudStatus: midtransData.fraud_status
+        };
+      } catch (e) {
+        console.error('Failed to parse midtrans response:', e);
+      }
+    }
+
+    // Get tracking info jika order sudah dikirim
     let trackingInfo = null;
     let trackingError = null;
     
@@ -129,6 +168,7 @@ const getOrderDetail = async (userId, orderId) => {
 
     return {
       ...order,
+      paymentDetails, // Tambahkan payment details
       trackingInfo,
       trackingError,
       shippingDetails: {
@@ -143,24 +183,17 @@ const getOrderDetail = async (userId, orderId) => {
         name: item.productName || item.product.name,
         quantity: item.quantity,
         price: item.price,
+        weight: item.weight,
         image: item.product.imageUrl,
         total: item.price * item.quantity
-      })),
-      orderSummary: {
-        subtotal: order.totalAmount - order.shippingCost,
-        shippingCost: order.shippingCost,
-        totalAmount: order.totalAmount
-      },
-      timestamps: {
-        shippedAt: order.shippedAt,
-        completedAt: order.completedAt
-      }
+      }))
     };
   } catch (error) {
     console.error('Failed to fetch order details:', error);
     throw error;
   }
 };
+
 
 const updateOrderAdmin = async (orderId, { status, trackingNumber, shipping_name
 
@@ -584,6 +617,9 @@ const cancelUserOrder = async (userId, orderId) => {
         transactionId: midtransResponse.transaction_id
       } : null
     };
+  }, {
+    maxWait: 20000, // 20 detik maksimal menunggu
+    timeout: 15000  // 15 detik timeout
   });
 };
 
@@ -741,6 +777,92 @@ const completeOrder = async (userId, orderId) => {
   });
 };
 
+
+const getAllOrdersAdmin = async ({ page = 1, limit = 10, status, paymentStatus, startDate, endDate }) => {
+  const skip = (page - 1) * limit;
+  
+  const whereClause = {
+    ...(status && { status }),
+    ...(paymentStatus && { paymentStatus }),
+    ...((startDate || endDate) && {
+      createdAt: {
+        ...(startDate && { gte: new Date(startDate) }),
+        ...(endDate && { lte: new Date(endDate) })
+      }
+    })
+  };
+
+  try {
+    const [orders, totalOrders] = await Promise.all([
+      prismaClient.order.findMany({
+        where: whereClause,
+        select: {
+          id: true,
+          createdAt: true,
+          status: true,
+          trackingNumber: true,
+          shipping_name: true,
+          paymentStatus: true,
+          totalAmount: true,
+          customerName: true,
+          customerPhone: true,
+          user: {
+            select: {
+              id: true,
+              email: true,
+              fullName: true
+            }
+          },
+          items: {
+            select: {
+              quantity: true,
+              price: true,
+              productName: true,
+              product: {
+                select: {
+                  name: true,
+                  imageUrl: true
+                }
+              }
+            }
+          }
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit
+      }),
+      prismaClient.order.count({ where: whereClause })
+    ]);
+
+    return {
+      data: orders.map(order => ({
+        ...order,
+        items: order.items.map(item => ({
+          name: item.productName || item.product.name,
+          quantity: item.quantity,
+          price: item.price,
+          image: item.product.imageUrl,
+          total: item.price * item.quantity
+        })),
+        user: {
+          id: order.user.id,
+          email: order.user.email,
+          name: order.user.fullName
+        }
+      })),
+      meta: {
+        currentPage: page,
+        totalPages: Math.ceil(totalOrders / limit),
+        totalItems: totalOrders
+      }
+    };
+  } catch (error) {
+    console.error('Failed to fetch all orders:', error);
+    throw error;
+  }
+};
+
+
 async function sendOrderNotification(order) {
   try {
     // Implement your notification logic here (email, push notification, etc.)
@@ -755,6 +877,9 @@ async function sendOrderNotification(order) {
   }
 }
 
+
+
+
 export default {
   getOrderList,
   getOrderDetail,
@@ -762,5 +887,6 @@ export default {
   deleteOrderAdmin,
   trackShipping,
   completeOrder,
-  cancelUserOrder
+  cancelUserOrder,
+  getAllOrdersAdmin
 };

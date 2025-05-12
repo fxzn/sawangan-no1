@@ -1,6 +1,6 @@
 import { validate } from '../validation/validation.js';
 import orderService from '../service/order-service.js';
-import { orderAdminUpdateValidation, orderQueryValidation } from '../validation/order-validation.js';
+import { orderAdminListValidation, orderAdminUpdateValidation, orderQueryValidation } from '../validation/order-validation.js';
 import { prismaClient } from '../application/database.js';
 import { ResponseError } from '../error/response-error.js';
 
@@ -150,6 +150,22 @@ export const cancelUserOrder = async (req, res, next) => {
       status: 'success',
       data: cancelledOrder,
       message: 'Order cancelled successfully'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getAllOrdersAdmin = async (req, res, next) => {
+  try {
+    const query = validate(orderAdminListValidation, req.query);
+    
+    const result = await orderService.getAllOrdersAdmin(query);
+
+    res.status(200).json({
+      status: 'success',
+      data: result.data,
+      meta: result.meta
     });
   } catch (error) {
     next(error);
