@@ -1,7 +1,8 @@
 import { prismaClient } from '../application/database.js';
 import { ResponseError } from '../error/response-error.js';
 import komerceService from './komerce-service.js';
-// import snap from './midtrans-service.js';
+import midtransService from './midtrans-service.js';
+
 
 const calculateCartTotals = (items) => {
   return items.reduce((acc, item) => {
@@ -44,6 +45,7 @@ const createMidtransTransaction = async (order, user) => {
   try {
     // Use database order ID as Midtrans order ID for easier tracking
     const midtransOrderId = order.id;
+    // const midtransOrderId = `ORDER-${order.id}-${Date.now()}`;
 
     const itemDetails = order.items.map(item => ({
       id: item.productId,
@@ -95,7 +97,7 @@ const createMidtransTransaction = async (order, user) => {
       }
     };
 
-    const transaction = await snap.createTransaction(parameter);
+    const transaction = await midtransService.snap.createTransaction(parameter);
     
     return {
       paymentUrl: transaction.redirect_url,
@@ -181,7 +183,8 @@ const processCheckout = async (userId, checkoutData) => {
         shippingCost: selectedService.price,
         shipping_name: selectedService.shipping_name,
         service_name: selectedService.service_name,
-        estimatedDelivery: selectedService.etd || '1-3 days'
+        estimatedDelivery: selectedService.etd || '1-3 days',
+        paymentMethod: checkoutData.paymentMethod // e.g., 'bank_transfer', 'gopay', etc.
       },
       include: { items: { include: { product: true } } }
     });
@@ -206,10 +209,31 @@ const processCheckout = async (userId, checkoutData) => {
 };
 
 
+const checkPaymentStatus = async (orderId) => {
+  const order = await prismaClient.order.findUnique({
+      where: { id: orderId },
+      select: { midtransOrderId: true }
+  });
+  
+  if (!order) throw new ResponseError(404, 'Order not found');
+  
+  const statusResponse = await midtransService.core.transaction.status(order.midtransOrderId);
+  
+  return {
+      status: mapMidtransStatus(statusResponse.transaction_status),
+      paymentMethod: statusResponse.payment_type,
+      paidAt: statusResponse.settlement_time || null,
+      vaNumber: statusResponse.va_numbers?.[0]?.va_number,
+      bank: statusResponse.va_numbers?.[0]?.bank
+  } ,  {
+    maxWait: 20000, // 20 detik maksimal menunggu
+    timeout: 15000  // 15 detik timeout
+  };
+};
 
 
-// Update your exports to include the new function
 export default {
-  processCheckout
+  processCheckout,
+  checkPaymentStatus
 };
 

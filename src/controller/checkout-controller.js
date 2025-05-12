@@ -138,19 +138,6 @@ export const searchDestinations = async (req, res, next) => {
 };
 
 
-export const paymentNotification = async (req, res, next) => {
-  try {
-    const notification = req.body;
-    const result = await checkoutService.handlePaymentNotification(notification);
-    res.status(200).json({
-      success: true,
-      data: result
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
 export const checkPayment = async (req, res, next) => {
   try {
     const orderId = req.params.orderId;
@@ -175,41 +162,3 @@ export const checkPayment = async (req, res, next) => {
     next(error);
   }
 };
-
-
-// export const handleMidtransNotification = async (req, res) => {
-//   try {
-//     console.log('Received Headers:', req.headers);
-//     console.log('Raw Body:', req.body);
-
-//     // Validasi dasar
-//     if (!req.body || Object.keys(req.body).length === 0) {
-//       console.error('Empty request body received');
-//       return res.status(400).json({
-//         success: false,
-//         message: 'Request body cannot be empty'
-//       });
-//     }
-
-//     // Proses notifikasi
-//     const result = await checkoutService.handlePaymentNotification(req.body);
-    
-//     return res.status(200).json({
-//       success: true,
-//       data: result
-//     });
-//   } catch (error) {
-//     console.error('Notification Processing Error:', {
-//       error: error.message,
-//       body: req.body,
-//       stack: error.stack
-//     });
-    
-//     // Tetap return 200 ke Midtrans
-//     return res.status(200).json({
-//       success: false,
-//       message: 'Notification processed with errors',
-//       error: error.message
-//     });
-//   }
-// };

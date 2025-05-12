@@ -63,12 +63,12 @@ const getAllProducts = async () => {
       ratingAvg: true,
       // reviewCount: true,
       createdAt: true,
-      // addedBy: {
-      //   select: {
-      //     id: true,
-      //     email: true
-      //   }
-      // },
+      addedBy: {
+        select: {
+          id: true,
+          email: true
+        }
+      },
       // // Include recent reviews for rating context
       // Review: {
       //   take: 1,
@@ -93,7 +93,7 @@ const getAllProducts = async () => {
   // Format the response with additional rating info
   return products.map(product => ({
     ...product,
-    // weightInGrams: product.weight * 1000,
+    weightInGrams: product.weight * 1000,
     // Ensure ratingAvg is never null
     ratingAvg: product.ratingAvg || 0,
     // Ensure reviewCount is never null
@@ -119,12 +119,12 @@ const getProductById = async (id) => {
       ratingAvg: true,
       // reviewCount: true,
       createdAt: true,
-      // addedBy: {
-      //   select: {
-      //     id: true,
-      //     email: true
-      //   }
-      // },
+      addedBy: {
+        select: {
+          id: true,
+          email: true
+        }
+      },
       Review: {
         orderBy: {
           createdAt: 'desc'
@@ -169,7 +169,7 @@ const getProductById = async (id) => {
 
   return {
     ...product,
-    // weightInGrams: product.weight * 1000,
+    weightInGrams: product.weight * 1000,
     ratingAvg: product.ratingAvg || 0,
     // reviewCount: product.reviewCount || 0,
     ratingDistribution: distribution,

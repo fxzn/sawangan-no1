@@ -4,21 +4,20 @@ import { errorMiddleware } from '../middleware/error-middleware.js';
 import publicRoute from '../route/public-route.js';
 import router from '../route/api.js';
 import adminRouter from '../route/admin-route.js';
-// import bodyParser from 'body-parser';
+import webhookRouter from '../route/webhook-route.js';
 
 
 export const web = express();
+web.use(webhookRouter);
 
 web.use(express.json());
 web.use(cors())
 
-// web.use(bodyParser.json()); // untuk application/json
-// web.use(bodyParser.urlencoded({ extended: true })); // untuk x-www-form-urlencoded
-
-
 web.use(publicRoute);
 web.use(router);
 web.use(adminRouter);
+
+
 
 web.use(errorMiddleware);
 
