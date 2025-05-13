@@ -79,15 +79,15 @@ const removeFromWishlist = async (userId, productId) => {
 
 const getUserWishlist = async (userId, query) => {
   userId = validate(userUuidValidation, userId);
-  const { page, limit } = validate(wishlistQueryValidation, query);
+  // const { page, limit } = validate(wishlistQueryValidation, query);
 
-  const skip = (page - 1) * limit;
+  // const skip = (page - 1) * limit;
 
-  const [wishlist, total] = await Promise.all([
+  const [ wishlist ] = await Promise.all([
     prismaClient.wishlist.findMany({
       where: { userId },
-      skip,
-      take: limit,
+      // skip,
+      // take: limit,
       include: {
         product: {
           select: {
@@ -112,12 +112,12 @@ const getUserWishlist = async (userId, query) => {
 
   return {
     data: wishlist.map(item => item.product),
-    meta: {
-      total,
-      page,
-      limit,
-      totalPages: Math.ceil(total / limit)
-    }
+    // meta: {
+    //   total,
+    //   page,
+    //   limit,
+    //   totalPages: Math.ceil(total / limit)
+    // }
   };
 };
 
