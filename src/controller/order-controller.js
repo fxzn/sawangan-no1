@@ -1,6 +1,6 @@
 import { validate } from '../validation/validation.js';
 import orderService from '../service/order-service.js';
-import { orderAdminListValidation, orderAdminUpdateValidation, orderQueryValidation } from '../validation/order-validation.js';
+import { orderAdminListValidation, orderAdminUpdateValidation, orderIdValidation, orderQueryValidation } from '../validation/order-validation.js';
 import { prismaClient } from '../application/database.js';
 import { ResponseError } from '../error/response-error.js';
 
@@ -155,67 +155,19 @@ export const getAllOrdersAdmin = async (req, res, next) => {
   }
 };
 
-// export const paymentNotification = async (req, res, next) => {
-//   try {
-//     const notification = req.body;
-    
-//     // Verifikasi dan update data pembayaran
-//     const updatedOrder = await orderService.handlePaymentNotification(notification);
-
-//     res.status(200).json({
-//       status: 'success',
-//       data: {
-//         orderId: updatedOrder.id,
-//         paymentStatus: updatedOrder.paymentStatus,
-//         paymentMethod: updatedOrder.paymentMethod,
-//         paidAt: updatedOrder.paidAt
-//       }
-//     });
-//   } catch (error) {
-//     next(error);
-//   }
-// };
-
-
-export const checkOrderPaymentStatus = async (req, res, next) => {
+export const getOrderDetailAdmin = async (req, res, next) => {
   try {
-    const { orderId } = req.params;
-    const { userId } = req;
+    const orderId = validate(orderIdValidation, req.params.orderId);
+    const order = await orderService.getOrderDetailAdmin(orderId);
     
-    // Verifikasi order milik user
-    const order = await prismaClient.order.findFirst({
-      where: { id: orderId, userId },
-      select: { midtransOrderId: true }
-    });
-    
-    if (!order) {
-      throw new ResponseError(404, 'Order not found');
-    }
-    
-    // Cek status di Midtrans
-    const paymentStatus = await checkPaymentStatus(order.midtransOrderId);
-    
-    // Update database
-    await prismaClient.order.update({
-      where: { id: orderId },
-      data: {
-        paymentStatus: paymentStatus.status,
-        paymentMethod: paymentStatus.paymentMethod,
-        paidAt: paymentStatus.paymentTime ? new Date(paymentStatus.paymentTime) : null,
-        midtransResponse: JSON.stringify(paymentStatus.rawResponse)
-      }
-    });
-    
-    res.json({
-      status: paymentStatus.status,
-      method: paymentStatus.paymentMethod,
-      paidAt: paymentStatus.paymentTime
+    res.status(200).json({
+      status: 'success',
+      data: order
     });
   } catch (error) {
     next(error);
   }
 };
-
 
 
 function formatOrderResponse(order) {
