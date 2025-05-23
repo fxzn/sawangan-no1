@@ -1,3 +1,4 @@
+import bcrypt from 'bcrypt';
 import { prismaClient } from "../application/database.js";
 import { ResponseError } from "../error/response-error.js";
 import { cloudinary } from "../middleware/cloudinary-middleware.js";
@@ -27,13 +28,13 @@ const getUserProfile = async (userId) => {
 
 
 const updateProfile = async (userId, request) => {
-  const validated = validate(updateProfileValidation, request); // Validasi: fullName, phone
+  validate(updateProfileValidation, request); 
   
   return await prismaClient.user.update({
     where: { id: userId },
     data: {
-      fullName: validated.fullName,
-      phone: validated.phone
+      fullName: validate.fullName,
+      phone: validate.phone
     },
     select: { id: true, fullName: true, phone: true, email: true }
   });

@@ -1,32 +1,5 @@
 import { OAuth2Client } from "google-auth-library";
 
-// const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
-
-// export const verifyGoogleToken = async (token) => {
-//   try {
-//     const ticket = await client.verifyIdToken({
-//       idToken: token,
-//       audience: process.env.GOOGLE_CLIENT_ID
-//     });
-    
-//     const payload = ticket.getPayload();
-    
-//     if (!payload.email_verified) {
-//       throw new Error('Google account not verified');
-//     }
-
-//     return {
-//       name: payload.name,
-//       email: payload.email,
-//       picture: payload.picture
-//     };
-//   } catch (error) {
-//     console.error('Google token verification error:', error);
-//     throw new Error('Invalid Google token');
-//   }
-// };
-
-
 
 // Gunakan constructor dengan option object untuk lebih jelas
 const client = new OAuth2Client({
@@ -36,7 +9,7 @@ const client = new OAuth2Client({
 
 export const verifyGoogleToken = async (token) => {
   try {
-    console.log('Verifying token for client ID:', process.env.GOOGLE_CLIENT_ID);
+    // console.log('Verifying token for client ID:', process.env.GOOGLE_CLIENT_ID);
     
     const ticket = await client.verifyIdToken({
       idToken: token,
@@ -47,7 +20,7 @@ export const verifyGoogleToken = async (token) => {
     });
     
     const payload = ticket.getPayload();
-    console.log('Token payload:', payload);
+    // console.log('Token payload:', payload);
 
     if (!payload.email_verified) {
       throw new Error('Google account not verified');

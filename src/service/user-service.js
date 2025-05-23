@@ -53,46 +53,6 @@ const register = async (request) => {
 
 };
 
-// const register = async (request) => {
-//   // Validasi request untuk registrasi
-//   const user = validate(registerValidation, request);
-  
-//   // Cek email sudah terdaftar atau belum 
-//   const existingUser = await prismaClient.user.findUnique({
-//     where: { email: user.email }
-//   });
-
-//   if (existingUser) {
-//     throw new ResponseError(404, "Email already exists");
-//   }
-
-
-//   // Hash password pada database
-//   user.password = await bcrypt.hash(user.password, 10);
-  
-//   // untuk buat user baru
-//   return prismaClient.user.create({
-//       data: {
-//           id: uuid(),
-//           fullName: user.fullName,
-//           email: user.email,
-//           phone: user.phone,
-//           password: user.password,
-//           provider: 'LOCAL',
-//           isVerified: false
-//       },
-//       select: {
-//           id: true,
-//           fullName: true,
-//           email: true,
-//           phone: true,
-//           role: true,
-//           avatar: true,
-//           createdAt: true
-//       }
-//   });
-// };
-
 
 const login = async (request) => {
   // Validasi request
@@ -135,7 +95,7 @@ const login = async (request) => {
   const token = jwt.sign(
       { id: user.id, email: user.email, role: user.role },
       process.env.JWT_SECRET,
-      { expiresIn: '1d' }
+      { expiresIn: '1h' }
   );
 
   // Update token di database
@@ -167,9 +127,9 @@ const logout = async (userId) => {
     select: { token: true }
   });
   
-  if (!user?.token) {
-    throw new ResponseError(400, "User already logged out");
-  }
+  // if (!user?.token) {
+  //   throw new ResponseError(400, "User already logged out");
+  // }
   
   const updatedUser = await prismaClient.user.update({
     where: { id: userId },
@@ -185,62 +145,6 @@ const logout = async (userId) => {
 
 
 
-const loginAdmin = async (request) => {
-  // Validasi request
-  const loginRequest = validate(loginValidation, request);
-
-  // Cari user dengan role ADMIN
-  const user = await prismaClient.user.findUnique({
-    where: {
-      email: loginRequest.email,
-      role: 'ADMIN' // Hanya admin yang bisa login
-    },
-    select: {
-      id: true,
-      email: true,
-      password: true,
-      fullName: true,
-      phone: true,
-      role: true,
-      avatar: true
-    }
-  });
-
-  if (!user) {
-    throw new ResponseError(401, "Admin not found");
-  }
-
-  // Verifikasi password
-  const isPasswordValid = await bcrypt.compare(loginRequest.password, user.password);
-  if (!isPasswordValid) {
-    throw new ResponseError(401, "Email or password wrong");
-  }
-
-  // Generate JWT token
-  const token = jwt.sign(
-    { id: user.id, email: user.email, role: user.role },
-    process.env.JWT_SECRET,
-    { expiresIn: '1d' }
-  );
-
-  // Update token di database
-  await prismaClient.user.update({
-    where: { id: user.id },
-    data: { token: token }
-  });
-
-  return {
-    id: user.id,
-    fullName: user.fullName,
-    email: user.email,
-    phone: user.phone,
-    role: user.role,
-    avatar: user.avatar,
-    token: token
-  };
-};
-
-
 const forgotPassword = async (email) => {
   const user = await prismaClient.user.findUnique({ 
     where: { 
@@ -250,8 +154,6 @@ const forgotPassword = async (email) => {
   });
   
   if (!user) throw new ResponseError(404, "User not found");
-  // const user = await prismaClient.user.findUnique({ where: { email } });
-  // if (!user) throw new ResponseError(404, "User not found");
 
   // Generate token dan hash
   const resetToken = generateResetToken();
@@ -262,7 +164,7 @@ const forgotPassword = async (email) => {
   await prismaClient.user.update({
     where: { id: user.id },
     data: {
-      resetPasswordToken: hashedToken, // Simpan yang sudah di-hash
+      resetPasswordToken: hashedToken, 
       resetPasswordExpire: expireTime
     }
   });
@@ -313,75 +215,6 @@ const resetPassword = async (token, password, confirmPassword) => {
 
 
 
-
-
-// const googleAuth = async (googleToken) => {
-//   try {
-//     // 1. Verifikasi token Google
-//     const { name, email, picture } = await verifyGoogleToken(googleToken);
-
-//     // 2. Buat atau update user
-//     const user = await prismaClient.user.upsert({
-//       where: { email },
-//       update: { 
-//         avatar: picture || null // Update avatar saja
-//       },
-//       create: {
-//         id: uuid(),
-//         email,
-//         fullName: name || null, // Optional
-//         phone: null,            // Optional
-//         avatar: picture || null,
-//         provider: 'GOOGLE',
-//         role: 'USER',          // Default role
-//         isVerified: true       // Akun Google sudah terverifikasi
-//       },
-//       select: {
-//         id: true,
-//         fullName: true,
-//         email: true,
-//         phone: true,
-//         avatar: true,
-//         role: true,
-//         provider: true,
-//         isVerified: true 
-//       }
-//     });
-
-//     // 3. Generate JWT
-//     const token = jwt.sign(
-//       { id: user.id, email: user.email, role: user.role },
-//       process.env.JWT_SECRET,
-//       { expiresIn: '1d' }
-//     );
-
-//     // 4. Update token di database
-//     await prismaClient.user.update({
-//       where: { id: user.id },
-//       data: { token }
-//     });
-
-//     return {
-//       id: user.id,
-//       fullName: user.fullName,
-//       email: user.email,
-//       phone: user.phone,
-//       role: user.role,
-//       avatar: user.avatar,
-//       token,
-//       provider: user.provider
-//     };
-
-//   } catch (error) {
-//     console.error('Google Auth Error:', error);
-//     throw new Error(error.message || 'Autentikasi Google gagal');
-//   }
-// };
-
-
-
-
-// get user all untuk admin
 
 const googleAuth = async (googleToken) => {
   try {
@@ -608,7 +441,7 @@ const deleteUser = async (userId) => {
 export default {
   register,
   login,
-  loginAdmin,
+  // loginAdmin,
   logout,
   forgotPassword,
   resetPassword,

@@ -83,11 +83,11 @@ const createMidtransTransaction = async (order, user) => {
           country_code: 'IDN'
         }
       },
-      callbacks: {
-        finish: `${process.env.FRONTEND_URL}/orders/${order.id}`,
-        error: `${process.env.FRONTEND_URL}/orders/${order.id}?status=failed`,
-        pending: `${process.env.FRONTEND_URL}/orders/${order.id}?status=pending`
-      },
+      // callbacks: {
+      //   finish: `${process.env.FRONTEND_URL}/orders/${order.id}`,
+      //   error: `${process.env.FRONTEND_URL}/orders/${order.id}?status=failed`,
+      //   pending: `${process.env.FRONTEND_URL}/orders/${order.id}?status=pending`
+      // },
       expiry: {
         unit: 'hours',
         duration: 24

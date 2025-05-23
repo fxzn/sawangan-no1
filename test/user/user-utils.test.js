@@ -1,14 +1,15 @@
-import { prismaClient } from "../src/application/database.js";
+import { prismaClient } from "../../src/application/database.js";
 import bcrypt from "bcrypt";
 import { v4 as uuid } from "uuid";
 
-// Regular user utilities
+
+
 export const createTestUser = async () => {
   return prismaClient.user.create({
     data: {
       id: uuid(),
       fullName: "test",
-      email: "test@example.com",
+      email: "farhanwundari01@gmail.com", // Ubah ke email yang konsisten
       phone: "08123456789",
       password: await bcrypt.hash("password123", 10),
       provider: "LOCAL",
@@ -22,20 +23,25 @@ export const removeTestUser = async () => {
   await prismaClient.user.deleteMany({
     where: {
       OR: [
-        { email: "test@example.com" },
+        { email: "farhanwundari01@gmail.com" }, // Sesuaikan
         { email: "test2@example.com" }
       ]
     }
   });
 };
 
+
+
+
+
 export const getTestUser = async () => {
   return prismaClient.user.findUnique({
     where: {
-      email: "test@example.com"
+      email: "farhanwundari01@gmail.com" // Sesuaikan
     }
   });
 };
+
 
 // Admin user utilities
 export const createTestAdmin = async () => {
@@ -86,3 +92,27 @@ export const removeAllTestTokens = async () => {
     }
   });
 };
+
+
+export async function createGoogleUser() {
+  await prismaClient.user.create({
+    data: {
+      id: 'user-google-123',
+      fullName: 'Google User',
+      email: 'googleuser@example.com',
+      phone: '08000000000',
+      password: await bcrypt.hash('password123', 10),
+      provider: 'GOOGLE',
+      role: 'USER',
+      isVerified: true
+    }
+  });
+}
+
+export async function removeGoogleUser() {
+  await prismaClient.user.delete({
+    where: {
+      email: 'googleuser@example.com'
+    }
+  });
+}

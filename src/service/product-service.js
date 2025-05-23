@@ -61,7 +61,6 @@ const getAllProducts = async () => {
       stock: true,
       expiryDate: true,
       ratingAvg: true,
-      // reviewCount: true,
       createdAt: true,
       addedBy: {
         select: {
@@ -69,39 +68,91 @@ const getAllProducts = async () => {
           email: true
         }
       },
-      // // Include recent reviews for rating context
-      // Review: {
-      //   take: 1,
-      //   orderBy: {
-      //     createdAt: 'desc'
-      //   },
-      //   select: {
-      //     rating: true
-      //   }
-      // }
-    },
-    // orderBy: [
-    //   {
-    //     ratingAvg: 'desc'
-    //   },
-    //   {
-    //     createdAt: 'desc'
-    //   }
-    // ]
+      Review: {
+        select: {
+          rating: true
+        }
+      }
+    }
   });
 
   // Format the response with additional rating info
-  return products.map(product => ({
-    ...product,
-    // weightInGrams: product.weight * 1000,
-    // Ensure ratingAvg is never null
-    ratingAvg: product.ratingAvg || 0,
-    // Ensure reviewCount is never null
-    // reviewCount: product.reviewCount || 0,
-    // // Add latest rating for quick reference
-    // latestRating: product.Review.length > 0 ? product.Review[0].rating : null
-  }));
+  return products.map(product => {
+    // Hitung ulang ratingAvg jika ada review
+    const hasReviews = product.Review.length > 0;
+    const accurateRatingAvg = hasReviews 
+      ? product.Review.reduce((sum, review) => sum + review.rating, 0) / product.Review.length
+      : 0;
+
+    return {
+      ...product,
+      ratingAvg: accurateRatingAvg,
+      // Remove Review array from response
+      Review: undefined
+    };
+  });
 };
+
+
+
+// const getAllProducts = async () => {
+//   const products = await prismaClient.product.findMany({
+//     select: {
+//       id: true,
+//       name: true,
+//       price: true,
+//       description: true,
+//       imageUrl: true,
+//       category: true,
+//       weight: true,
+//       stock: true,
+//       expiryDate: true,
+//       ratingAvg: true,
+//       // reviewCount: true,
+//       createdAt: true,
+//       addedBy: {
+//         select: {
+//           id: true,
+//           email: true
+//         }
+//       },
+//       // // Include recent reviews for rating context
+//       // Review: {
+//       //   take: 1,
+//       //   orderBy: {
+//       //     createdAt: 'desc'
+//       //   },
+//       //   select: {
+//       //     rating: true
+//       //   }
+//       // }
+//     },
+//     // orderBy: [
+//     //   {
+//     //     ratingAvg: 'desc'
+//     //   },
+//     //   {
+//     //     createdAt: 'desc'
+//     //   }
+//     // ]
+//   });
+  
+
+//   // Format the response with additional rating info
+//   return products.map(product => ({
+//     ...product,
+//     // weightInGrams: product.weight * 1000,
+//     // Ensure ratingAvg is never null
+//     ratingAvg: product.ratingAvg,
+//     // Ensure reviewCount is never null
+//     // reviewCount: product.reviewCount || 0,
+//     // // Add latest rating for quick reference
+//     // latestRating: product.Review.length > 0 ? product.Review[0].rating : null
+//   }));
+// };
+
+
+
 
 const getProductById = async (id) => {
   const product = await prismaClient.product.findUnique({
@@ -116,7 +167,7 @@ const getProductById = async (id) => {
       weight: true,
       stock: true,
       expiryDate: true,
-      ratingAvg: true,
+      ratingAvg:true,
       // reviewCount: true,
       createdAt: true,
       addedBy: {
@@ -147,9 +198,26 @@ const getProductById = async (id) => {
     }
   });
 
+
+
+
   if (!product) return null;
 
-  // Calculate rating distribution
+  // Hitung review count secara eksplisit
+  const reviewCount = await prismaClient.review.count({
+    where: { productId: id }
+  });
+
+  // Perbaikan: Hitung ulang ratingAvg jika ada review
+  let ratingAvg = product.ratingAvg || 0;
+  if (reviewCount > 0) {
+    const ratingAgg = await prismaClient.review.aggregate({
+      where: { productId: id },
+      _avg: { rating: true }
+    });
+    ratingAvg = ratingAgg._avg.rating;
+  }
+
   const ratingDistribution = await prismaClient.review.groupBy({
     by: ['rating'],
     where: { productId: id },
@@ -158,7 +226,6 @@ const getProductById = async (id) => {
     }
   });
 
-  // Format distribution
   const distribution = {};
   for (let i = 1; i <= 5; i++) {
     distribution[i] = 0;
@@ -167,15 +234,26 @@ const getProductById = async (id) => {
     distribution[item.rating] = item._count.rating;
   });
 
+
   return {
+
     ...product,
-    // weightInGrams: product.weight * 1000,
-    ratingAvg: product.ratingAvg || 0,
-    // reviewCount: product.reviewCount || 0,
+    ratingAvg, 
+    reviewCount,
     ratingDistribution: distribution,
-    // Add helpful derived fields
-    hasReviews: product.reviewCount > 0,
-    isNew: new Date(product.createdAt) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) // Within 30 days
+    hasReviews: reviewCount > 0,
+    isNew: new Date(product.createdAt) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+
+
+    // ...product,
+    // // weightInGrams: product.weight * 1000,
+    // ratingAvg: product.ratingAvg || 0,
+    // // reviewCount: product.reviewCount || 0,
+    // ratingDistribution: distribution,
+    // reviewCount,
+    // // Add helpful derived fields
+    // hasReviews: product.reviewCount > 0,
+    // isNew: new Date(product.createdAt) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) // Within 30 days
   };
 };
 
@@ -320,11 +398,16 @@ const updateProductRating = async (productId) => {
       _count: { rating: true }
     });
 
+    // Perbaikan: Gunakan nilai rata-rata langsung jika ada review
+    const avgRating = aggregateResult._count.rating > 0 
+      ? aggregateResult._avg.rating 
+      : 0;
+
     // Update product with new rating data
     return await prismaClient.product.update({
       where: { id: productId },
       data: {
-        ratingAvg: aggregateResult._avg.rating || 0,
+        ratingAvg: avgRating,
         reviewCount: aggregateResult._count.rating || 0
       }
     });
@@ -333,6 +416,7 @@ const updateProductRating = async (productId) => {
     throw new ResponseError(500, 'Failed to update product rating statistics');
   }
 };
+
 
 const getProductRating = async (productId) => {
   return await prismaClient.product.findUnique({

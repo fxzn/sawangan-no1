@@ -40,12 +40,6 @@ const forgotPasswordValidation = Joi.object({
     .messages({ 'any.only': 'Passwords do not match' })
 });
 
-// const googleAuthValidation = Joi.object({
-//   token: Joi.string().required().messages({
-//     'string.empty': 'Google token is required',
-//     'any.required': 'Invalid Google token'
-//   })
-// });
 
 const googleAuthValidation = Joi.object({
   access_token: Joi.string().required().messages({

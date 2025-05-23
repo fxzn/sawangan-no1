@@ -23,6 +23,7 @@ const getOrderList = async ( userId ) => {
               productName: true,
               product: {
                 select: {
+                  id: true,
                   name: true,
                   imageUrl: true
                 }
@@ -43,6 +44,7 @@ const getOrderList = async ( userId ) => {
       data: orders.map(order => ({
         ...order,
         items: order.items.map(item => ({
+          id: item.product.id,
           name: item.productName || item.product.name,
           quantity: item.quantity,
           price: item.price,
@@ -92,6 +94,7 @@ const getOrderDetail = async (userId, orderId) => {
             weight: true,
             product: {
               select: {
+                id: true,
                 name: true,
                 imageUrl: true
               }
@@ -172,6 +175,7 @@ const getOrderDetail = async (userId, orderId) => {
         postalCode: order.shippingPostCode
       },
       items: order.items.map(item => ({
+        id: item.product.id,
         name: item.productName || item.product.name,
         quantity: item.quantity,
         price: item.price,
@@ -276,7 +280,8 @@ const deleteOrderAdmin = async (orderId) => {
     const order = await prisma.order.findUnique({
       where: { id: orderId },
       include: {
-        items: true
+        items: true,
+        reviews: true
       }
     });
 
@@ -295,6 +300,12 @@ const deleteOrderAdmin = async (orderId) => {
           })
         )
       );
+    }
+
+    if (order.reviews.length > 0) {
+      await prisma.review.deleteMany({
+        where: { orderId }
+      });
     }
 
     await prisma.orderItem.deleteMany({
