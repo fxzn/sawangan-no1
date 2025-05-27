@@ -10,23 +10,7 @@ import webhookRouter from '../route/webhook-route.js';
 
 
 export const web = express();
-
-web.use((req, res, next) => {
-  if (req.originalUrl === '/api/v1/payment' && req.method === 'POST') {
-    let rawBody = '';
-    req.setEncoding('utf8');
-    req.on('data', chunk => rawBody += chunk);
-    req.on('end', () => {
-      req.rawBody = rawBody;
-      next();
-    });
-    return;
-  }
-  next();
-});
-
-web.use(webhookRouter);
-// web.use(webhookRouter)
+web.use(webhookRouter)
 
 web.use(cors())
 web.use(express.json());

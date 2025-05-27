@@ -1,11 +1,13 @@
-import { Router } from "express";
+import { Router } from 'express';
 import express from 'express';
-import { webhookController } from "../controller/webhook-controller.js";
+import paymentController from '../controller/payment-controller.js';
 
-const webhookRouter = Router();
+const router = Router();
 
-webhookRouter.post('/api/v1/payment', 
-    express.raw({ type: 'application/json'}), 
-    webhookController);
+// Important: Must use express.raw() middleware
+router.post('/payment-webhook', 
+    express.raw({ type: 'application/json' }),
+    paymentController.handlePaymentNotification
+);
 
-export default webhookRouter;
+export default router;
