@@ -15,6 +15,7 @@ publicRouter.post('/api/v1/auth/google', googleAuth);
 
 // product router
 publicRouter.get('/api/v1/products', getAllProducts);
+publicRouter.get('/api/v1/products/:id', getProductById);
 
 
 export default publicRouter

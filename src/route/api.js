@@ -34,7 +34,7 @@ router.post(
 router.patch('/api/v1/profile/changepassword', changePassword);
 
 // produk
-router.get('/api/v1/products/:id', getProductById);
+
 
 
 // keranjang router
