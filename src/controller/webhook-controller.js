@@ -17,7 +17,7 @@ const validateSignature = (notification, serverKey) => {
     return signatureKey === hash;
 };
 
-export const webhookController = async (req, res) => {
+const webhookController = async (req, res) => {
   try {
       const rawBody = req.body.toString();
       const notification = JSON.parse(rawBody);
@@ -100,3 +100,7 @@ const mapMidtransStatus = (status) => {
     };
     return statusMap[status] || 'PENDING';
 };
+
+export {
+    webhookController
+}
