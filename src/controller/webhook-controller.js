@@ -9,39 +9,46 @@ const core = new midtransClient.CoreApi({
 });
 
 const validateSignature = (notification, serverKey) => {
-    const signatureKey = notification.signature_key;
+    if (!notification?.signature_key) return false;
+    
     const hash = crypto.createHash('sha512')
         .update(`${notification.order_id}${notification.status_code}${notification.gross_amount}${serverKey}`)
         .digest('hex');
     
-    return signatureKey === hash;
+    return notification.signature_key === hash;
 };
 
 const webhookController = async (req, res) => {
   try {
-      const rawBody = req.body.toString();
-      const notification = JSON.parse(req.rawBody || req.body.toString());
-    //   const notification = JSON.parse(rawBody);
+      // Get the raw body from middleware
+      const rawBody = req.rawBody;
+      if (!rawBody) {
+          return res.status(400).send('Missing request body');
+      }
+
+      // Parse the notification
+      const notification = JSON.parse(rawBody);
       
-      // 1. Validasi signature
+      // 1. Validate signature
       if (!validateSignature(notification, process.env.MIDTRANS_SERVER_KEY)) {
+          console.warn('Invalid signature received:', notification);
           return res.status(401).send('Invalid signature');
       }
 
-      // 2. Verifikasi transaksi
+      // 2. Verify transaction
       const statusResponse = await core.transaction.notification(notification);
       
-      // 3. Cari order berdasarkan midtransOrderId
+      // 3. Find order
       const order = await prismaClient.order.findUnique({
           where: { midtransOrderId: statusResponse.order_id }
       });
 
       if (!order) {
-          console.error('Order not found with midtransOrderId:', statusResponse.order_id);
+          console.error('Order not found:', statusResponse.order_id);
           return res.status(404).send('Order not found');
       }
 
-      // 4. Data update
+      // 4. Prepare update data
       const updateData = {
           paymentStatus: mapMidtransStatus(statusResponse.transaction_status),
           paymentMethod: statusResponse.payment_type,
@@ -55,19 +62,19 @@ const webhookController = async (req, res) => {
           })
       };
 
-      // 5. Update menggunakan ID order, bukan midtransOrderId
+      // 5. Update order
       await prismaClient.order.update({
-          where: { id: order.id },  // Gunakan ID internal
+          where: { id: order.id },
           data: updateData
       });
 
-      // 6. Buat payment log
+      // 6. Create payment log
       await createPaymentLog(order.id, statusResponse);
 
       res.status(200).send('OK');
   } catch (error) {
-      console.error('Payment notification error:', error);
-      res.status(500).send('Error processing notification');
+      console.error('Payment processing failed:', error);
+      res.status(500).send('Error processing notification: ' + error.message);
   }
 };
 
@@ -102,6 +109,4 @@ const mapMidtransStatus = (status) => {
     return statusMap[status] || 'PENDING';
 };
 
-export {
-    webhookController
-}
+export { webhookController };
