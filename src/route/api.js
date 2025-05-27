@@ -33,7 +33,7 @@ router.post(
 // router.post('/api/v1/profile/avatar', upload.single('avatar'), uploadAvatar);
 router.patch('/api/v1/profile/changepassword', changePassword);
 
-r
+
 
 
 
