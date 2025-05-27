@@ -1,118 +1,269 @@
-import { prismaClient } from "../../src/application/database.js";
 import bcrypt from "bcrypt";
-import { v4 as uuid } from "uuid";
+import { prismaClient } from "../../src/application/database.js";
+import { hashToken } from "../../src/utils/token-utils.js";
+import jwt from "jsonwebtoken";
 
-
-
-export const createTestUser = async () => {
-  return prismaClient.user.create({
-    data: {
-      id: uuid(),
-      fullName: "test",
-      email: "farhanwundari01@gmail.com", // Ubah ke email yang konsisten
-      phone: "08123456789",
-      password: await bcrypt.hash("password123", 10),
-      provider: "LOCAL",
-      role: "USER",
-      isVerified: true
-    }
-  });
-};
 
 export const removeTestUser = async () => {
-  await prismaClient.user.deleteMany({
-    where: {
-      OR: [
-        { email: "farhanwundari01@gmail.com" }, // Sesuaikan
-        { email: "test2@example.com" }
-      ]
-    }
-  });
+    await prismaClient.user.deleteMany({
+        where: {
+            email: "test@example.com"
+        }
+    });
+}
+
+export const createTestUser = async () => {
+    await prismaClient.user.create({
+        data: {
+            id: "test-id",
+            fullName: "Test User",
+            email: "test@example.com",
+            phone: "1234567890",
+            password: await bcrypt.hash("password123", 10),
+            provider: 'LOCAL',
+            isVerified: false,
+            token: null
+        }
+    });
+}
+
+export const createTestUserLogout = async () => {
+    const token = jwt.sign(
+        { id: "test-user-id" },
+        process.env.JWT_SECRET,
+        { expiresIn: '1h' }
+    );
+    
+    return await prismaClient.user.create({
+        data: {
+            id: "test-user-id",
+            fullName: "Test User",
+            email: "test@example.com",
+            password: await bcrypt.hash("password123", 10),
+            provider: 'LOCAL',
+            isVerified: true,
+            token: token // Pastikan token disimpan
+        }
+    });
 };
 
+export const createLocalTestUser = async () => {
+    return await prismaClient.user.create({
+        data: {
+            id: "local-test-id",
+            fullName: "Local User",
+            email: "local@example.com",
+            password: await bcrypt.hash("Password123!", 10),
+            provider: 'LOCAL',
+            isVerified: true,
+            token: null
+        }
+    });
+};
 
-
+export const createGoogleTestUser = async () => {
+    return await prismaClient.user.create({
+        data: {
+            id: "google-test-id",
+            fullName: "Google User",
+            email: "google@example.com",
+            avatar: "https://google-avatar.jpg",
+            provider: 'GOOGLE',
+            isVerified: true,
+            token: null
+        }
+    });
+};
 
 
 export const getTestUser = async () => {
-  return prismaClient.user.findUnique({
-    where: {
-      email: "farhanwundari01@gmail.com" // Sesuaikan
-    }
-  });
+    return prismaClient.user.findUnique({
+        where: {
+            email: "test@example.com"
+        }
+    });
+};
+
+export const createTestUserWithResetToken = async () => {
+    const hashedToken = await hashToken("valid-reset-token");
+    return await prismaClient.user.create({
+        data: {
+            id: "reset-test-id",
+            fullName: "Reset Test User",
+            email: "reset@example.com",
+            phone: "081234567890",
+            password: await bcrypt.hash("OldPassword123!", 10),
+            provider: 'LOCAL',
+            isVerified: true,
+            resetPasswordToken: hashedToken,
+            resetPasswordExpire: new Date(Date.now() + 3600000) 
+        }
+    });
+};
+
+export const removeTestUserByEmail = async (email) => {
+    await prismaClient.user.deleteMany({
+        where: { email }
+    });
 };
 
 
-// Admin user utilities
-export const createTestAdmin = async () => {
-  return prismaClient.user.create({
-    data: {
-      id: uuid(),
-      fullName: "Admin",
-      email: "admin@example.com",
-      phone: "08123456788",
-      password: await bcrypt.hash("admin123", 10),
-      provider: "LOCAL",
-      role: "ADMIN",
-      isVerified: true
-    }
-  });
+
+export const createAdminUser = async () => {
+    return await prismaClient.user.create({
+        data: {
+            id: "admin-test-id",
+            fullName: "Admin User",
+            email: "admin@example.com",
+            password: await bcrypt.hash("AdminPassword123!", 10),
+            provider: 'LOCAL',
+            role: 'ADMIN',
+            isVerified: true,
+            token: null
+        }
+    });
 };
 
-export const removeTestAdmin = async () => {
-  await prismaClient.user.deleteMany({
-    where: {
-      email: "admin@example.com"
-    }
-  });
+export const createRegularUser = async () => {
+    return await prismaClient.user.create({
+        data: {
+            id: "regular-user-id",
+            fullName: "Regular User",
+            email: "regular@example.com",
+            password: await bcrypt.hash("UserPassword123!", 10),
+            provider: 'LOCAL',
+            role: 'USER',
+            isVerified: true,
+            token: null
+        }
+    });
 };
 
-// Reset token utilities
-export const createTestResetToken = async (userId) => {
-  const resetToken = "test-reset-token";
-  const hashedToken = await bcrypt.hash(resetToken, 10);
-  const expireTime = new Date(Date.now() + 3600000); // 1 hour
-  
-  await prismaClient.user.update({
-    where: { id: userId },
-    data: {
-      resetPasswordToken: hashedToken,
-      resetPasswordExpire: expireTime
-    }
-  });
-  
-  return resetToken;
-};
-
-export const removeAllTestTokens = async () => {
-  await prismaClient.user.updateMany({
-    data: {
-      resetPasswordToken: null,
-      resetPasswordExpire: null
-    }
-  });
+export const removeTestUsers = async () => {
+    await prismaClient.user.deleteMany({
+        where: {
+            OR: [
+                { email: 'admin@example.com' },
+                { email: 'regular@example.com' }
+            ]
+        }
+    });
 };
 
 
-export async function createGoogleUser() {
-  await prismaClient.user.create({
-    data: {
-      id: 'user-google-123',
-      fullName: 'Google User',
-      email: 'googleuser@example.com',
-      phone: '08000000000',
-      password: await bcrypt.hash('password123', 10),
-      provider: 'GOOGLE',
-      role: 'USER',
-      isVerified: true
-    }
-  });
-}
+export const createLoggedInUser = async () => {
+    const token = jwt.sign({ id: "test-id" }, process.env.JWT_SECRET);
+    return await prismaClient.user.create({
+        data: {
+            id: "test-id",
+            fullName: "Test User",
+            email: "test@example.com",
+            password: await bcrypt.hash("Password123!", 10),
+            provider: 'LOCAL',
+            isVerified: true,
+            token: token
+        }
+    });
+};
 
-export async function removeGoogleUser() {
-  await prismaClient.user.delete({
-    where: {
-      email: 'googleuser@example.com'
+export const removeTestUserById = async (id) => {
+    await prismaClient.user.deleteMany({
+        where: { id }
+    });
+};
+
+
+
+export const mockUserWithRelations = {
+  id: '550e8400-e29b-41d4-a716-446655440000',
+  products: [{ id: 'prod1', imageUrl: 'http://example.com/image1.jpg' }],
+  carts: [{ id: 'cart1', items: [{ id: 'item1' }] }],
+  orders: [
+    { 
+      id: 'order1', 
+      items: [{ id: 'orderItem1' }],
+      paymentLogs: [{ id: 'payment1' }],
+      reviews: [{ id: 'review1' }]
     }
-  });
-}
+  ],
+  reviews: [{ id: 'userReview1' }]
+};
+
+export const mockUserWithoutRelations = {
+  id: '550e8400-e29b-41d4-a716-446655440000',
+  products: [],
+  carts: [],
+  orders: [],
+  reviews: []
+};
+
+export const mockPrismaDeleteOperations = {
+  cartItemDelete: { count: 1 },
+  cartDelete: { count: 1 },
+  paymentLogDelete: { count: 1 },
+  orderItemDelete: { count: 1 },
+  reviewDelete: { count: 1 },
+  orderDelete: { count: 1 },
+  userDelete: { id: '550e8400-e29b-41d4-a716-446655440000' }
+};
+
+
+// export const createAdminTestUser = async () => {
+//     return await prismaClient.user.create({
+//         data: {
+//             id: "admin-test-id",
+//             fullName: "Admin User",
+//             email: "admin@example.com",
+//             password: await bcrypt.hash("AdminPassword123!", 10),
+//             provider: 'LOCAL',
+//             role: 'ADMIN',
+//             isVerified: true,
+//             token: null
+//         }
+//     });
+// };
+
+// export const createMultipleTestUsers = async () => {
+
+//     await prismaClient.user.createMany({
+//         data: [
+//             {
+//                 id: "user1-id",
+//                 fullName: "User One",
+//                 email: "user1@example.com",
+//                 provider: 'LOCAL',
+//                 role: 'USER',
+//                 isVerified: true
+//             },
+//             {
+//                 id: "user2-id",
+//                 fullName: "User Two",
+//                 email: "user2@example.com",
+//                 provider: 'GOOGLE',
+//                 role: 'USER',
+//                 isVerified: true
+//             },
+//             {
+//                 id: "user3-id",
+//                 fullName: "User Three",
+//                 email: "user3@example.com",
+//                 provider: 'LOCAL',
+//                 role: 'USER',
+//                 isVerified: false
+//             }
+//         ]
+//     });
+// };
+
+// export const removeAllTestUsers = async () => {
+//     await prismaClient.user.deleteMany({
+//         where: {
+//             OR: [
+//                 { email: 'admin@example.com' },
+//                 { email: 'user1@example.com' },
+//                 { email: 'user2@example.com' },
+//                 { email: 'user3@example.com' }
+//             ]
+//         }
+//     });
+// };

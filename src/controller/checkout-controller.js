@@ -10,14 +10,23 @@ export const checkout = async (req, res, next) => {
   try {
     const userId = req.user.id;
     const request = validate(checkoutValidation, req.body);
+
+     // Cek kelengkapan profil sebelum checkout
+    const userProfile = await profileService.getUserProfileForCheckout(userId);
+    
+    if (!userProfile.phone) {
+      throw new ResponseError(400, 'Silakan lengkapi nomor HP Anda di halaman profil sebelum checkout', {
+        code: 'PROFILE_INCOMPLETE',
+        missingFields: ['phone'],
+        redirectUrl: '/profile?checkout_redirect=true'
+      });
+    }
+
     const order = await checkoutService.processCheckout(userId, request);
     
     res.status(201).json({
       success: true,
-      data: {
-        ...order,
-        paymentToken: undefined // Hide sensitive data
-      }
+      data: order
     });
   } catch (error) {
     next(error);
@@ -138,27 +147,27 @@ export const searchDestinations = async (req, res, next) => {
 };
 
 
-export const checkPayment = async (req, res, next) => {
-  try {
-    const orderId = req.params.orderId;
-    const userId = req.user.id;
+// export const checkPayment = async (req, res, next) => {
+//   try {
+//     const orderId = req.params.orderId;
+//     const userId = req.user.id;
     
-    // Verify order ownership
-    const order = await prismaClient.order.findUnique({
-      where: { id: orderId, userId }
-    });
+//     // Verify order ownership
+//     const order = await prismaClient.order.findUnique({
+//       where: { id: orderId, userId }
+//     });
 
-    if (!order) {
-      throw new ResponseError(404, 'Order not found or access denied');
-    }
+//     if (!order) {
+//       throw new ResponseError(404, 'Order not found or access denied');
+//     }
 
-    const status = await checkoutService.checkPaymentStatus(orderId);
+//     const status = await checkoutService.checkPaymentStatus(orderId);
     
-    res.status(200).json({
-      success: true,
-      data: status
-    });
-  } catch (error) {
-    next(error);
-  }
-};
+//     res.status(200).json({
+//       success: true,
+//       data: status
+//     });
+//   } catch (error) {
+//     next(error);
+//   }
+// };

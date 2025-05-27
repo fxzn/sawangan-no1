@@ -108,9 +108,9 @@ const updateCartItem = async (userId, productId, request) => {
     where: { userId }
   });
 
-  if (!cart) {
-    throw new ResponseError(404, 'Cart not found');
-  }
+  // if (!cart) {
+  //   throw new ResponseError(404, 'Cart not found');
+  // }
 
   // Update item-nya
   await prismaClient.cartItem.update({

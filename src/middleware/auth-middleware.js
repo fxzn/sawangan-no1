@@ -4,27 +4,24 @@ import { prismaClient } from '../application/database.js';
 
 export const authMiddleware = async (req, res, next) => {
     const token = req.get('Authorization')?.replace('Bearer ', '').trim();
-    
-    // 1. Basic check
+
     if (!token) {
         return res.status(401).json({ errors: "Token required" });
     }
 
     try {
-        // 2. Verify JWT structure & signature
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-        // 3. Check token in database
-        const user = await prismaClient.user.findUnique({
-            where: { 
+        // Ganti findUnique → findFirst
+        const user = await prismaClient.user.findFirst({
+            where: {
                 id: decoded.id,
-                token: token 
+                token: token
             },
             select: {
                 id: true,
                 email: true,
-                role: true,
-                // Hindari return password/token
+                role: true
             }
         });
 
@@ -32,12 +29,9 @@ export const authMiddleware = async (req, res, next) => {
             return res.status(401).json({ errors: "Invalid or revoked token" });
         }
 
-        // 4. Attach user to request
         req.user = user;
         next();
-
     } catch (error) {
-        // Handle specific JWT errors
         if (error instanceof jwt.JsonWebTokenError) {
             return res.status(401).json({ errors: "Invalid token format" });
         }
@@ -49,6 +43,7 @@ export const authMiddleware = async (req, res, next) => {
         return res.status(500).json({ errors: "Internal server error" });
     }
 };
+
 
 
 export const adminMiddleware = async (req, res, next) => {

@@ -1,3 +1,4 @@
+import { loggerApp } from "../../src/application/logger.js";
 import { web } from "../../src/application/web.js";
 import {
     createTestUser,
@@ -45,6 +46,8 @@ describe('Wishlist API', () => {
                     productId: product.id
                 });
 
+            loggerApp.info(result.body);
+
             expect(result.status).toBe(200);
             expect(result.body.data).toBeDefined();
             expect(result.body.data.product.id).toBe(product.id);
@@ -61,6 +64,8 @@ describe('Wishlist API', () => {
                     productId: product.id
                 });
 
+            loggerApp.info(result.body);
+
             expect(result.status).toBe(400);
             expect(result.body.errors).toBeDefined();
         });
@@ -75,6 +80,8 @@ describe('Wishlist API', () => {
                     productId: invalidProductId
                 });
 
+            loggerApp.info(result.body);
+
             expect(result.status).toBe(404);
             expect(result.body.errors).toBeDefined();
         });
@@ -86,6 +93,8 @@ describe('Wishlist API', () => {
                 .send({
                     productId: ""
                 });
+
+            loggerApp.info(result.body);
 
             expect(result.status).toBe(400);
             expect(result.body.errors).toBeDefined();
@@ -99,6 +108,8 @@ describe('Wishlist API', () => {
             const result = await supertest(web)
                 .delete(`/api/v1/wishlist/${product.id}`)
                 .set('Authorization', token);
+            
+            loggerApp.info(result.body);
 
             expect(result.status).toBe(200);
             expect(result.body.data).toBeDefined();
@@ -108,6 +119,8 @@ describe('Wishlist API', () => {
             const result = await supertest(web)
                 .delete(`/api/v1/wishlist/${product.id}`)
                 .set('Authorization', token);
+            
+            loggerApp.info(result.body);
 
             expect(result.status).toBe(404);
             expect(result.body.errors).toBeDefined();
@@ -117,6 +130,8 @@ describe('Wishlist API', () => {
             const result = await supertest(web)
                 .delete('/api/v1/wishlist/invalid-product-id')
                 .set('Authorization', token);
+            
+            loggerApp.info(result.body);
 
             expect(result.status).toBe(400);
             expect(result.body.errors).toBeDefined();
@@ -131,6 +146,8 @@ describe('Wishlist API', () => {
                 .get("/api/v1/wishlists")
                 .set('Authorization', token);
 
+            loggerApp.info(result.body);
+
             expect(result.status).toBe(200);
             expect(result.body.data).toBeDefined();
             expect(result.body.data.length).toBe(1);
@@ -141,6 +158,8 @@ describe('Wishlist API', () => {
             const result = await supertest(web)
                 .get("/api/v1/wishlists")
                 .set('Authorization', token);
+            
+            loggerApp.info(result.body);
 
             expect(result.status).toBe(200);
             expect(result.body.data).toBeDefined();
@@ -156,6 +175,8 @@ describe('Wishlist API', () => {
                 .get(`/api/v1/wishlist/check/${product.id}`)
                 .set('Authorization', token);
 
+            loggerApp.info(result.body);
+
             expect(result.status).toBe(200);
             expect(result.body.data).toBeDefined();
             expect(result.body.data.isInWishlist).toBe(true);
@@ -166,6 +187,8 @@ describe('Wishlist API', () => {
                 .get(`/api/v1/wishlist/check/${product.id}`)
                 .set('Authorization', token);
 
+            loggerApp.info(result.body);
+
             expect(result.status).toBe(200);
             expect(result.body.data).toBeDefined();
             expect(result.body.data.isInWishlist).toBe(false);
@@ -175,6 +198,8 @@ describe('Wishlist API', () => {
             const result = await supertest(web)
                 .get('/api/v1/wishlist/check/invalid-product-id')
                 .set('Authorization', token);
+
+            loggerApp.info(result.body);
 
             expect(result.status).toBe(400);
             expect(result.body.errors).toBeDefined();

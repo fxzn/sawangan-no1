@@ -17,9 +17,9 @@ const addProduct = async (adminId, request, imageFile) => {
   });
 
   // Validasi weight
-  if (validated.weight <= 0) {
-    throw new Error(`Weight must be positive: ${request.weight} grams`);
-  }
+  // if (validated.weight <= 0) {
+  //   throw new Error(`Weight must be positive: ${request.weight} grams`);
+  // }
 
   const uploadResult = await cloudinary.uploader.upload(imageFile.path, {
     folder: 'product_images'
@@ -92,65 +92,6 @@ const getAllProducts = async () => {
     };
   });
 };
-
-
-
-// const getAllProducts = async () => {
-//   const products = await prismaClient.product.findMany({
-//     select: {
-//       id: true,
-//       name: true,
-//       price: true,
-//       description: true,
-//       imageUrl: true,
-//       category: true,
-//       weight: true,
-//       stock: true,
-//       expiryDate: true,
-//       ratingAvg: true,
-//       // reviewCount: true,
-//       createdAt: true,
-//       addedBy: {
-//         select: {
-//           id: true,
-//           email: true
-//         }
-//       },
-//       // // Include recent reviews for rating context
-//       // Review: {
-//       //   take: 1,
-//       //   orderBy: {
-//       //     createdAt: 'desc'
-//       //   },
-//       //   select: {
-//       //     rating: true
-//       //   }
-//       // }
-//     },
-//     // orderBy: [
-//     //   {
-//     //     ratingAvg: 'desc'
-//     //   },
-//     //   {
-//     //     createdAt: 'desc'
-//     //   }
-//     // ]
-//   });
-  
-
-//   // Format the response with additional rating info
-//   return products.map(product => ({
-//     ...product,
-//     // weightInGrams: product.weight * 1000,
-//     // Ensure ratingAvg is never null
-//     ratingAvg: product.ratingAvg,
-//     // Ensure reviewCount is never null
-//     // reviewCount: product.reviewCount || 0,
-//     // // Add latest rating for quick reference
-//     // latestRating: product.Review.length > 0 ? product.Review[0].rating : null
-//   }));
-// };
-
 
 
 
@@ -361,7 +302,7 @@ const deleteProduct = async (productId) => {
         const publicId = deletedProduct.imageUrl.split('/').pop().split('.')[0];
         await cloudinary.uploader.destroy(`product_images/${publicId}`);
       } catch (error) {
-        console.error('Gagal menghapus gambar dari Cloudinary:', error);
+        // console.error('Gagal menghapus gambar dari Cloudinary:', error);
       }
     }
 

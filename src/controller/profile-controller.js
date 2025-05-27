@@ -16,20 +16,38 @@ export const getProfile = async (req, res, next) => {
 
 export const updateProfile = async (req, res, next) => {
   try {
+    // Log request body untuk memastikan data terkirim
+    console.log('Request body:', req.body);
+    
     const data = await profileService.updateProfile(req.user.id, req.body);
-    res.json({ success: true, data });
+    
+    res.json({ 
+      success: true, 
+      data,
+      message: "Profile updated successfully" 
+    });
   } catch (error) {
     next(error);
   }
 };
 
 
+// export const updateProfile = async (req, res, next) => {
+//   try {
+//     const data = await profileService.updateProfile(req.user.id, req.body);
+//     res.json({ success: true, data });
+//   } catch (error) {
+//     next(error);
+//   }
+// };
+
+
 
 export const uploadAvatar = async (req, res, next) => {
   try {
-    if (!req.file) {
-      throw new ResponseError(400, 'Avatar file is required');
-    }
+    // if (!req.file) {
+    //   throw new ResponseError(400, 'Avatar file is required');
+    // }
 
     const result = await profileService.updateAvatar(req.user.id, req.file);
     

@@ -7,7 +7,7 @@ export const register = async (req, res, next) => {
     
     const user = await userService.register(req.body);
     
-    res.status(201).json({
+    res.status(200).json({
       data: user
     });
   } catch (error) {
@@ -83,14 +83,14 @@ export const googleAuth = async (req, res, next) => {
     // Gunakan field yang sesuai dengan frontend
     const { access_token: idToken } = await googleAuthValidation.validateAsync(req.body);
     
-    console.log('Received token type:', typeof idToken, 'Length:', idToken.length);
+    // console.log('Received token type:', typeof idToken, 'Length:', idToken.length);
     const data = await userService.googleAuth(idToken);
     
     res.status(200).json({
       data
     });
   } catch (error) {
-    console.error('Controller error:', error);
+    // console.error('Controller error:', error);
     next(error);
   }
 };

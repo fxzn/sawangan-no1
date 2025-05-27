@@ -14,8 +14,8 @@ export const addProduct = [
         throw new Error('Product image is required');
       }
 
-      console.log('Raw request body:', JSON.stringify(req.body, null, 2));
-      console.log('Raw weight:', req.body.weight, 'Type:', typeof req.body.weight);
+      // console.log('Raw request body:', JSON.stringify(req.body, null, 2));
+      // console.log('Raw weight:', req.body.weight, 'Type:', typeof req.body.weight);
 
       // Konversi gram ke kilogram (dibagi 1000)
       const weightInGrams = parseFloat(req.body.weight);

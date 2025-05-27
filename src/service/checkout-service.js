@@ -106,17 +106,21 @@ const createMidtransTransaction = async (order, user) => {
     };
 
   } catch (error) {
-    console.error('Midtrans error:', {
-      message: error.message,
-      response: error.ApiResponse,
-      stack: error.stack
-    });
+    // console.error('Midtrans error:', {
+    //   message: error.message,
+    //   response: error.ApiResponse,
+    //   stack: error.stack
+    // });
     throw new ResponseError(500, 'Failed to create payment transaction');
   }
 };
 
 const processCheckout = async (userId, checkoutData) => {
   return await prismaClient.$transaction(async (prisma) => {
+
+
+
+
     const cart = await prisma.cart.findUnique({
       where: { userId },
       include: { items: { include: { product: true } } }
@@ -160,7 +164,8 @@ const processCheckout = async (userId, checkoutData) => {
 
     const order = await prisma.order.create({
       data: {
-        userId,
+        user: { connect: { id: userId } },
+        // userId,
         items: {
           create: itemsWithPrice.map(item => ({
             productId: item.productId,
@@ -209,31 +214,31 @@ const processCheckout = async (userId, checkoutData) => {
 };
 
 
-const checkPaymentStatus = async (orderId) => {
-  const order = await prismaClient.order.findUnique({
-      where: { id: orderId },
-      select: { midtransOrderId: true }
-  });
+// const checkPaymentStatus = async (orderId) => {
+//   const order = await prismaClient.order.findUnique({
+//       where: { id: orderId },
+//       select: { midtransOrderId: true }
+//   });
   
-  if (!order) throw new ResponseError(404, 'Order not found');
+//   if (!order) throw new ResponseError(404, 'Order not found');
   
-  const statusResponse = await midtransService.core.transaction.status(order.midtransOrderId);
+//   const statusResponse = await midtransService.core.transaction.status(order.midtransOrderId);
   
-  return {
-      status: mapMidtransStatus(statusResponse.transaction_status),
-      paymentMethod: statusResponse.payment_type,
-      paidAt: statusResponse.settlement_time || null,
-      vaNumber: statusResponse.va_numbers?.[0]?.va_number,
-      bank: statusResponse.va_numbers?.[0]?.bank
-  } ,  {
-    maxWait: 20000, // 20 detik maksimal menunggu
-    timeout: 15000  // 15 detik timeout
-  };
-};
+//   return {
+//       status: mapMidtransStatus(statusResponse.transaction_status),
+//       paymentMethod: statusResponse.payment_type,
+//       paidAt: statusResponse.settlement_time || null,
+//       vaNumber: statusResponse.va_numbers?.[0]?.va_number,
+//       bank: statusResponse.va_numbers?.[0]?.bank
+//   } ,  {
+//     maxWait: 20000, // 20 detik maksimal menunggu
+//     timeout: 15000  // 15 detik timeout
+//   };
+// };
 
 
 export default {
   processCheckout,
-  checkPaymentStatus
+  // checkPaymentStatus
 };
 

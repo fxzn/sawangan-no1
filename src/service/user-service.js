@@ -80,9 +80,9 @@ const login = async (request) => {
   }
 
 
-  if (user.provider !== 'LOCAL') {
-    throw new ResponseError(401, `Please login using ${user.provider}`);
-  }
+  // if (user.provider !== 'LOCAL') {
+  //   throw new ResponseError(401, `Please login using ${user.provider}`);
+  // }
 
 
   // Verifikasi password
@@ -214,8 +214,6 @@ const resetPassword = async (token, password, confirmPassword) => {
 };
 
 
-
-
 const googleAuth = async (googleToken) => {
   try {
     // 1. Verifikasi token Google
@@ -287,7 +285,7 @@ const googleAuth = async (googleToken) => {
     };
 
   } catch (error) {
-    console.error('Google Auth Error:', error);
+    // console.error('Google Auth Error:', error);
     throw new ResponseError(401, error.message || 'Google authentication failed');
   }
 };

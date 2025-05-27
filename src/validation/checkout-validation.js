@@ -9,5 +9,6 @@ export const checkoutValidation = Joi.object({
   destinationId: Joi.string().required().pattern(/^\d+$/),
   shippingService: Joi.string().required(),
   courier: Joi.string().required(),
-  notes: Joi.string().max(500).optional()
+  notes: Joi.string().max(500).optional(),
+  paymentMethod: Joi.string().valid('bank_transfer', 'gopay', 'credit_card') // tambahkan ini
 }).options({ abortEarly: false });

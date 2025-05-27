@@ -10,6 +10,8 @@ import { cancelUserOrder, getOrderDetails, getOrderTracking, getUserOrders } fro
 import { completeOrder, createReview, getProductReviews } from '../controller/review-controller.js';
 import { addToWishlist, checkProductInWishlist, getWishlist, removeFromWishlist } from '../controller/wishlist-controller.js';
 import { changePassword, getProfile, updateProfile, uploadAvatar } from '../controller/profile-controller.js';
+import { checkAvatarExists } from '../middleware/checkavatar-middleware.js';
+import { getProductById } from '../controller/product-controller.js';
 
 
 const router = Router();
@@ -22,8 +24,17 @@ router.delete('/api/v1/auth/logout', logout);
 // profile router
 router.get('/api/v1/profile', getProfile);
 router.patch('/api/v1/profile', updateProfile);
-router.post('/api/v1/profile/avatar', upload.single('avatar'), uploadAvatar);
+router.post(
+  '/api/v1/profile/avatar',
+  upload.single('avatar'),
+  checkAvatarExists, // pastikan file ada
+  uploadAvatar
+);
+// router.post('/api/v1/profile/avatar', upload.single('avatar'), uploadAvatar);
 router.patch('/api/v1/profile/changepassword', changePassword);
+
+// produk
+router.get('/api/v1/products/:id', getProductById);
 
 
 // keranjang router
@@ -33,7 +44,7 @@ router.patch('/api/v1/cart/items/:productId', updateCartItem);
 router.delete('/api/v1/cart/items/:productId', removeItemFromCart);
 router.delete('/api/v1/cart', clearCart);
 
-    
+
 // Checkout router
 router.post('/api/v1/checkout', checkout);
 
