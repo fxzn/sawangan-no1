@@ -7,32 +7,60 @@ import { validate } from '../validation/validation.js';
 
 
 
+// export const checkout = async (req, res, next) => {
+//   try {
+//     const userId = req.user.id;
+//     const request = validate(checkoutValidation, req.body);
+
+//      // Cek kelengkapan profil sebelum checkout
+//     const userProfile = await profileService.getUserProfile(userId);
+    
+//     if (!userProfile.phone) {
+//       throw new ResponseError(400, 'Silakan lengkapi nomor HP Anda di halaman profil sebelum checkout', {
+//         // code: 'PROFILE_INCOMPLETE',
+//         // missingFields: ['phone'],
+//         // redirectUrl: 'https://website-sawangan.vercel.app/profile?checkout_redirect=true'
+//         code: 'PROFILE_INCOMPLETE',
+//         redirectUrl: 'https://website-sawangan.vercel.app/profile?checkout_redirect=true',
+//         // Tambahkan flag untuk frontend
+//         action: 'REDIRECT'
+//       });
+//     }
+
+//     const order = await checkoutService.processCheckout(userId, request);
+    
+//     res.status(201).json({
+//       success: true,
+//       data: order
+//     });
+//   } catch (error) {
+//     next(error);
+//   }
+// };
+
 export const checkout = async (req, res, next) => {
   try {
     const userId = req.user.id;
     const request = validate(checkoutValidation, req.body);
 
-     // Cek kelengkapan profil sebelum checkout
     const userProfile = await profileService.getUserProfile(userId);
     
     if (!userProfile.phone) {
-      throw new ResponseError(400, 'Silakan lengkapi nomor HP Anda di halaman profil sebelum checkout', {
-        // code: 'PROFILE_INCOMPLETE',
-        // missingFields: ['phone'],
-        // redirectUrl: 'https://website-sawangan.vercel.app/profile?checkout_redirect=true'
-        code: 'PROFILE_INCOMPLETE',
-        redirectUrl: 'https://website-sawangan.vercel.app/profile?checkout_redirect=true',
-        // Tambahkan flag untuk frontend
-        action: 'REDIRECT'
+      // Return 403 dengan redirect URL
+      return res.status(403).json({
+        success: false,
+        error: {
+          code: 'PROFILE_INCOMPLETE',
+          message: 'Silakan lengkapi nomor HP Anda',
+          redirectUrl: `${process.env.FRONTEND_URL}/profile?checkout_redirect=true`,
+          action: 'REDIRECT'
+        }
       });
     }
 
     const order = await checkoutService.processCheckout(userId, request);
     
-    res.status(201).json({
-      success: true,
-      data: order
-    });
+    res.status(201).json({ success: true, data: order });
   } catch (error) {
     next(error);
   }
