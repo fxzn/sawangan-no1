@@ -17,9 +17,13 @@ export const checkout = async (req, res, next) => {
     
     if (!userProfile.phone) {
       throw new ResponseError(400, 'Silakan lengkapi nomor HP Anda di halaman profil sebelum checkout', {
+        // code: 'PROFILE_INCOMPLETE',
+        // missingFields: ['phone'],
+        // redirectUrl: 'https://website-sawangan.vercel.app/profile?checkout_redirect=true'
         code: 'PROFILE_INCOMPLETE',
-        missingFields: ['phone'],
-        redirectUrl: 'https://website-sawangan.vercel.app/profile?checkout_redirect=true'
+        redirectUrl: 'https://website-sawangan.vercel.app/profile?checkout_redirect=true',
+        // Tambahkan flag untuk frontend
+        action: 'REDIRECT'
       });
     }
 
