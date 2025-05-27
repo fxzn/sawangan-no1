@@ -20,7 +20,8 @@ const validateSignature = (notification, serverKey) => {
 const webhookController = async (req, res) => {
   try {
       const rawBody = req.body.toString();
-      const notification = JSON.parse(rawBody);
+      const notification = JSON.parse(req.rawBody || req.body.toString());
+    //   const notification = JSON.parse(rawBody);
       
       // 1. Validasi signature
       if (!validateSignature(notification, process.env.MIDTRANS_SERVER_KEY)) {

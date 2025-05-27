@@ -4,7 +4,7 @@ import { webhookController } from "../controller/webhook-controller.js";
 
 const webhookRouter = Router();
 
-webhookRouter.post('/payment', 
+webhookRouter.post('/api/v1/payment', 
     express.raw({ type: 'application/json'}), 
     webhookController);
 
