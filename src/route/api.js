@@ -11,7 +11,7 @@ import { completeOrder, createReview, getProductReviews } from '../controller/re
 import { addToWishlist, checkProductInWishlist, getWishlist, removeFromWishlist } from '../controller/wishlist-controller.js';
 import { changePassword, getProfile, updateProfile, uploadAvatar } from '../controller/profile-controller.js';
 import { checkAvatarExists } from '../middleware/checkavatar-middleware.js';
-import { getProductById } from '../controller/product-controller.js';
+
 
 
 const router = Router();
@@ -33,7 +33,7 @@ router.post(
 // router.post('/api/v1/profile/avatar', upload.single('avatar'), uploadAvatar);
 router.patch('/api/v1/profile/changepassword', changePassword);
 
-// produk
+r
 
 
 
