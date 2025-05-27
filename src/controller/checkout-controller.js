@@ -1,6 +1,7 @@
 import { ResponseError } from '../error/response-error.js';
 import checkoutService from '../service/checkout-service.js';
 import komerceService from '../service/komerce-service.js';
+import profileService from '../service/profile-service.js';
 import { checkoutValidation } from '../validation/checkout-validation.js';
 import { validate } from '../validation/validation.js';
 
@@ -12,7 +13,7 @@ export const checkout = async (req, res, next) => {
     const request = validate(checkoutValidation, req.body);
 
      // Cek kelengkapan profil sebelum checkout
-    const userProfile = await profileService.getUserProfileForCheckout(userId);
+    const userProfile = await profileService.getUserProfile(userId);
     
     if (!userProfile.phone) {
       throw new ResponseError(400, 'Silakan lengkapi nomor HP Anda di halaman profil sebelum checkout', {
