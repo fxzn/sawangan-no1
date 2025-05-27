@@ -3,10 +3,8 @@
   "builds": [
     {
       "src": "api/index.js",
-      "use": "@vercel/node",
-      "config": {
-        "memory": 3008
-      }
+      "use": "@vercel/node"
+
     }
   ],
   "routes": [
@@ -22,11 +20,5 @@
       "src": "/api/(.*)",
       "dest": "/api/index.js"
     }
-  ],
-  "functions": {
-    "api/index.js": {
-      "memory": 3008,
-      "maxDuration": 30
-    }
-  }
+  ]
 }
